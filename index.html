@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team On-Time Tracker</title>
+    <style>
+        :root {
+            --on-time: #e6f4ea; --late: #fce8e6; --remote: #fef7e0;
+            --ooo: #f3e5f5; --pass: #e8f0fe; --sick: #f1f3f4;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; padding: 20px; color: #3c4043; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #1a73e8; }
+        
+        /* Rewards Bar */
+        .rewards-banner { display: flex; justify-content: space-between; margin-bottom: 30px; padding: 15px; background: #e8f0fe; border-radius: 8px; }
+        .reward-item { text-align: center; opacity: 0.3; transition: 0.3s; flex: 1; }
+        .reward-item.active { opacity: 1; transform: scale(1.1); font-weight: bold; color: #188038; }
+
+        /* Table Style */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        select { padding: 8px; border-radius: 4px; border: 1px solid #dadce0; cursor: pointer; }
+        
+        .ticket-badge { background: #f9ab00; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 5px; }
+        .streak-info { font-size: 0.9em; color: #70757a; }
+
+        .btn-save { display: block; width: 100%; padding: 15px; margin-top: 20px; background: #1a73e8; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        .btn-save:hover { background: #1765d1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 Team Punctuality Tracker</h1>
+
+    <div class="rewards-banner" id="rewardBanner">
+        <div class="reward-item" id="reward-5">🥐<br>5 Days: Breakfast</div>
+        <div class="reward-item" id="reward-10">🍱<br>10 Days: Lunch</div>
+        <div class="reward-item" id="reward-15">🏠<br>15 Days: Remote</div>
+        <div class="reward-item" id="reward-30">✈️<br>30 Days: Day Off</div>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <strong>Current Team Streak: <span id="teamStreak">0</span> Days</strong>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Today's Status</th>
+                <th>Personal Streak</th>
+                <th>Golden Tickets</th>
+            </tr>
+        </thead>
+        <tbody id="teamBody">
+            </tbody>
+    </table>
+
+    <button class="btn-save" onclick="processDay()">Log Today's Attendance</button>
+    <p style="font-size: 0.8em; color: gray; text-align: center;">Note: Refreshing will reset data unless connected to a database.</p>
+</div>
+
+<script>
+    const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
+    const options = ["On Time", "Late", "Remote", "OOO", "Office Closed", "PASS", "Sick"];
+    
+    // Initial State
+    let state = {
+        teamStreak: 0,
+        members: {}
+    };
+
+    team.forEach(name => {
+        state.members[name] = { personalStreak: 0, tickets: 0 };
+    });
+
+    function init() {
+        const tbody = document.getElementById('teamBody');
+        team.forEach(name => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><strong>${name}</strong></td>
+                <td>
+                    <select id="status-${name}">
+                        ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                    </select>
+                </td>
+                <td class="streak-info"><span id="streak-${name}">0</span> days</td>
+                <td><span id="tickets-${name}">0</span> 🎫</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function processDay() {
+        let allOnTime = true;
+
+        team.forEach(name => {
+            const status = document.getElementById(`status-${name}`).value;
+            const m = state.members[name];
+
+            if (status === "On Time") {
+                m.personalStreak++;
+                if (m.personalStreak % 10 === 0) {
+                    m.tickets++;
+                    alert(`${name} earned a Golden Ticket! 🎫`);
+                }
+            } else if (status === "Late") {
+                if (m.tickets > 0) {
+                    const useTicket = confirm(`${name} is late! Use a Golden Ticket to save the streak?`);
+                    if (useTicket) {
+                        m.tickets--;
+                    } else {
+                        m.personalStreak = 0;
+                        allOnTime = false;
+                    }
+                } else {
+                    m.personalStreak = 0;
+                    allOnTime = false;
+                }
+            } else if (status === "Remote") {
+                // Remote counts toward streak but doesn't break it
+            } else {
+                // OOO/Sick/Pass - neutral, doesn't break team streak but individual stops
+                m.personalStreak = 0;
+            }
+
+            // Update UI
+            document.getElementById(`streak-${name}`).innerText = m.personalStreak;
+            document.getElementById(`tickets-${name}`).innerText = m.tickets;
+        });
+
+        if (allOnTime) {
+            state.teamStreak++;
+        } else {
+            state.teamStreak = 0;
+            alert("Team streak broken! Back to Day 0.");
+        }
+
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('teamStreak').innerText = state.teamStreak;
+        
+        // Update Rewards
+        document.getElementById('reward-5').classList.toggle('active', state.teamStreak >= 5);
+        document.getElementById('reward-10').classList.toggle('active', state.teamStreak >= 10);
+        document.getElementById('reward-15').classList.toggle('active', state.teamStreak >= 15);
+        document.getElementById('reward-30').classList.toggle('active', state.teamStreak >= 30);
+    }
+
+    init();
+</script>
+
+</body>
+</html>
