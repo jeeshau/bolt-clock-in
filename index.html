@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bolt Team Hub</title>
     <style>
-        :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; }
+        :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
         .container { max-width: 850px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         
@@ -19,37 +19,38 @@
         .section { display: none; }
         .section.active { display: block; }
 
-        /* --- 5-Column Calendar (Weekdays Only) --- */
+        /* --- 日历通用样式 --- */
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-nav button { background: #e8f0fe; border: none; color: var(--primary); padding: 5px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
-        .calendar-grid { 
-            display: grid; 
-            grid-template-columns: repeat(5, 1fr); /* 重点：改为5列 */
-            gap: 8px; 
-            background: #f8f9fa; 
-            padding: 15px; 
-            border-radius: 12px; 
-            border: 1px solid #eee; 
-        }
+        .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; }
         .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #70757a; padding-bottom: 5px; }
-        .cal-day { aspect-ratio: 1.2; background: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; font-size: 14px; position: relative; }
-        .cal-day.empty { background: transparent; border: none; }
+        .cal-day { aspect-ratio: 1.2; background: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; font-size: 14px; cursor: pointer; transition: 0.2s; }
+        .cal-day:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .cal-day.empty { background: transparent; border: none; cursor: default; }
         .cal-day span { font-size: 8px; margin-top: 2px; font-weight: bold; }
 
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
+        .day-active { outline: 3px solid var(--primary); z-index: 1; }
 
-        .redeem-card { background: #fff9c4; border: 1px dashed var(--yellow); padding: 20px; border-radius: 12px; margin: 25px 0; }
-        .redeem-item { display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 8px; }
-        .redeem-item.locked { opacity: 0.4; filter: grayscale(1); }
+        /* 详情展示区 */
+        .history-detail { margin-top: 20px; padding: 15px; background: #f1f3f4; border-radius: 12px; display: none; }
+        .detail-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
+        .status-tag { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
 
-        .date-picker-area { background: #e8f0fe; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
+        /* 录入区 */
+        .date-input-wrap { text-align: center; margin-bottom: 20px; }
+        .date-input-wrap input { padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; font-family: inherit; }
+        
         table { width: 100%; border-collapse: collapse; }
         th { text-align: left; padding: 12px; color: #70757a; font-size: 13px; border-bottom: 2px solid #f1f3f4; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f3f4; }
         select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; }
         .btn-save { width: 100%; padding: 20px; background: var(--primary); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 20px; }
+        
+        /* Golden Ticket 专属颜色 */
+        option[value="Golden Ticket"] { color: var(--gold); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -66,8 +67,9 @@
     </div>
 
     <div id="checkin" class="section active">
-        <div class="date-picker-area">
-            <input type="date" id="logDate">
+        <div class="date-input-wrap">
+            <label style="display:block; margin-bottom:8px; font-size:12px; color:#70757a">Select Date to Edit:</label>
+            <input type="date" id="logDate" onchange="loadData()">
         </div>
         <table>
             <thead><tr><th>Member</th><th>Status</th></tr></thead>
@@ -84,10 +86,14 @@
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
 
-        <div class="redeem-card">
-            <h3 style="margin-top:0">🎁 Milestone Rewards</h3>
-            <p>Team Streak: <strong id="streakDisplay" style="color:var(--success)">0</strong> Days</p>
-            <div id="redeemList"></div>
+        <div id="historyDetail" class="history-detail">
+            <h4 id="detailTitle" style="margin-top:0">Selection Details</h4>
+            <div id="detailContent"></div>
+            <button onclick="editThisDay()" style="margin-top:15px; width:100%; padding:8px; border-radius:6px; border:1px solid var(--primary); color:var(--primary); background:none; cursor:pointer">Edit This Day</button>
+        </div>
+
+        <div style="background: #fff9c4; border: 1px dashed var(--yellow); padding: 20px; border-radius: 12px; margin-top: 25px;">
+            <p style="margin:0">Team Streak: <strong id="streakDisplay" style="color:var(--success)">0</strong> Days</p>
         </div>
     </div>
 </div>
@@ -97,11 +103,13 @@
     const GITHUB_REPO = "Bolt-Clock-In";
     const FILE_PATH = "data.csv";
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
-    const options = ["On Time", "Late", "Remote", "OOO", "Sick", "PASS"];
+    // 增加了 Golden Ticket 选项
+    const options = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
     
     let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
     let csvData = [];
     let viewDate = new Date();
+    let selectedDateForDetail = "";
 
     document.getElementById('logDate').valueAsDate = new Date();
 
@@ -128,9 +136,13 @@
             csvData = content.split('\n').filter(l => l.trim() !== "").map(l => l.split(','));
             document.getElementById('syncStat').innerHTML = "✅ Synced";
             
+            // 填充表单
             const dateVal = document.getElementById('logDate').value;
             const record = csvData.find(row => row[0] === dateVal);
-            if(record) team.forEach((n, i) => { if(record[i+1]) document.getElementById(`sel-${n}`).value = record[i+1]; });
+            team.forEach((n, i) => {
+                const el = document.getElementById(`sel-${n}`);
+                el.value = (record && record[i+1]) ? record[i+1] : "On Time";
+            });
         } catch(e) { document.getElementById('syncStat').innerHTML = "❌ Sync Error"; }
     }
 
@@ -140,13 +152,14 @@
     }
 
     function renderHistory() {
+        // Streak 计算逻辑：Late 会中断，但 Golden Ticket 不会
         const sorted = csvData.slice(1).sort((a, b) => new Date(a[0]) - new Date(b[0]));
         let streak = 0;
         sorted.forEach(row => { 
             const d = new Date(row[0]);
-            // 只有工作日参与 Streak 计算（虽然 csv 里通常也就只有工作日）
             if (d.getDay() !== 0 && d.getDay() !== 6) {
-                streak = row.slice(1).includes("Late") ? 0 : streak + 1; 
+                const hasLate = row.slice(1).includes("Late");
+                streak = hasLate ? 0 : streak + 1; 
             }
         });
         document.getElementById('streakDisplay').innerText = streak;
@@ -155,10 +168,7 @@
         const cal = document.getElementById('calendarGrid');
         cal.innerHTML = '';
         
-        // 只有 5 天
-        ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(d => {
-            cal.innerHTML += `<div class="weekday-label">${d}</div>`;
-        });
+        ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(d => cal.innerHTML += `<div class="weekday-label">${d}</div>`);
 
         const year = viewDate.getFullYear();
         const month = viewDate.getMonth();
@@ -167,14 +177,8 @@
         for(let d=1; d<=daysInMonth; d++) {
             const dateObj = new Date(year, month, d);
             const dayOfWeek = dateObj.getDay();
-
-            // 跳过周末
             if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-
-            // 如果是月初，且不是周一，需要填充空白
             if (d === 1 && dayOfWeek !== 1) {
-                // dayOfWeek: 2(Tue), 3(Wed), 4(Thu), 5(Fri)
-                // 需要填充的格子数 = dayOfWeek - 1
                 for(let i=0; i < dayOfWeek - 1; i++) cal.innerHTML += `<div class="cal-day empty"></div>`;
             }
 
@@ -182,37 +186,50 @@
             const row = csvData.find(r => r[0] === curDate);
             let cls = '', label = '';
             if(row) {
-                const fail = row.slice(1).includes("Late");
-                cls = fail ? 'day-fail' : 'day-success';
-                label = fail ? '<span>LATE</span>' : '<span>OK</span>';
+                const isLate = row.slice(1).includes("Late");
+                const hasTicket = row.slice(1).includes("Golden Ticket");
+                cls = isLate ? 'day-fail' : 'day-success';
+                label = isLate ? '<span>LATE</span>' : (hasTicket ? '<span style="color:var(--gold)">TICKET</span>' : '<span>OK</span>');
             }
-            cal.innerHTML += `<div class="cal-day ${cls}"><strong>${d}</strong>${label}</div>`;
+            cal.innerHTML += `<div class="cal-day ${cls}" id="cal-${curDate}" onclick="showDetail('${curDate}')"><strong>${d}</strong>${label}</div>`;
         }
-
-        const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
-        const redeemed = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
-        document.getElementById('redeemList').innerHTML = milestones.map(m => `
-            <div class="redeem-item ${streak >= m.d ? '' : 'locked'}">
-                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${streak >= m.d ? '' : 'disabled'} onchange="toggleRedeem('s${m.d}')">
-                <span><strong>${m.d} Days:</strong> ${m.t}</span>
-            </div>
-        `).join('');
     }
 
-    function toggleRedeem(k) {
-        let r = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
-        r[k] = !r[k]; localStorage.setItem('bolt_redeemed', JSON.stringify(r));
+    function showDetail(dateStr) {
+        selectedDateForDetail = dateStr;
+        document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('day-active'));
+        document.getElementById(`cal-${dateStr}`)?.classList.add('day-active');
+        
+        const row = csvData.find(r => r[0] === dateStr);
+        const detailBox = document.getElementById('historyDetail');
+        const content = document.getElementById('detailContent');
+        document.getElementById('detailTitle').innerText = "Details for " + dateStr;
+        
+        if(!row) {
+            content.innerHTML = "<p style='font-size:12px; color:#777'>No data recorded for this day.</p>";
+        } else {
+            content.innerHTML = team.map((name, i) => {
+                const status = row[i+1] || "N/A";
+                let color = "#5f6368";
+                if(status === "Late") color = "var(--danger)";
+                if(status === "On Time") color = "var(--success)";
+                if(status === "Golden Ticket") color = "var(--gold)";
+                return `<div class="detail-item"><span>${name}</span><span class="status-tag" style="color:${color}">${status}</span></div>`;
+            }).join('');
+        }
+        detailBox.style.display = "block";
+    }
+
+    function editThisDay() {
+        if(!selectedDateForDetail) return;
+        document.getElementById('logDate').value = selectedDateForDetail;
+        loadData();
+        switchTab('checkin');
     }
 
     async function uploadToGitHub() {
         const btn = document.getElementById('saveBtn');
         const dateVal = document.getElementById('logDate').value;
-        const checkD = new Date(dateVal);
-        if (checkD.getDay() === 0 || checkD.getDay() === 6) {
-            alert("It's the weekend! No need to log.");
-            return;
-        }
-
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
@@ -227,16 +244,15 @@
             await fetch(url, {
                 method: "PUT",
                 headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Log ${dateVal}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
+                body: JSON.stringify({ message: `Update ${dateVal}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
             });
-            alert("Success!"); await loadData();
-        } catch(e) { alert("Error!"); }
+            alert("Updated Successfully!"); await loadData();
+        } catch(e) { alert("Save Failed!"); }
         btn.disabled = false; btn.innerText = "Push Updates to GitHub";
     }
 
     document.getElementById('teamBody').innerHTML = team.map(n => `<tr><td><strong>${n}</strong></td><td><select id="sel-${n}">${options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></td></tr>`).join('');
     loadData();
-    document.getElementById('logDate').onchange = loadData;
 </script>
 </body>
 </html>
