@@ -3,98 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Hub</title>
+    <title>Bolt Team Hub - OnePage</title>
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
-        .container { max-width: 850px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; line-height: 1.5; }
+        .container { max-width: 900px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
         
-        .header-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px; }
-        .btn-token { background: none; border: 1px solid #dadce0; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: #70757a; font-size: 11px; }
+        /* Glassmorphism sections */
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .btn-token { background: none; border: 1px solid #ddd; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; color: #888; }
 
-        .tabs { display: flex; gap: 5px; margin-bottom: 25px; background: #f1f3f4; padding: 5px; border-radius: 10px; }
-        .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #5f6368; border-radius: 8px; transition: 0.2s; }
-        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-
-        .section { display: none; }
-        .section.active { display: block; }
-
-        /* --- 日历通用样式 --- */
+        /* Streak & Rewards */
+        .streak-hero { text-align: center; background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%); border: 1px solid #d2e3fc; }
+        .streak-number { font-size: 3rem; font-weight: 800; color: var(--primary); display: block; }
+        
+        /* Calendar Section */
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .calendar-nav button { background: #e8f0fe; border: none; color: var(--primary); padding: 5px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        
-        .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; }
-        .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #70757a; padding-bottom: 5px; }
-        .cal-day { aspect-ratio: 1.2; background: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; font-size: 14px; cursor: pointer; transition: 0.2s; }
-        .cal-day:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .calendar-nav button { background: #eee; border: none; padding: 5px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; }
+        .cal-day { aspect-ratio: 1.2; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; position: relative; }
+        .cal-day:hover { border-color: var(--primary); transform: scale(1.02); }
+        .cal-day.active { border: 3px solid var(--primary); box-shadow: 0 0 10px rgba(26,115,232,0.2); }
         .cal-day.empty { background: transparent; border: none; cursor: default; }
         .cal-day span { font-size: 8px; margin-top: 2px; font-weight: bold; }
-
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
-        .day-active { outline: 3px solid var(--primary); z-index: 1; }
 
-        /* 详情展示区 */
-        .history-detail { margin-top: 20px; padding: 15px; background: #f1f3f4; border-radius: 12px; display: none; }
-        .detail-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
-        .status-tag { font-weight: bold; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        /* Editing Block - 默认隐藏 */
+        #editBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .edit-item { display: flex; flex-direction: column; gap: 5px; }
+        .edit-item label { font-size: 12px; font-weight: bold; color: #856404; }
+        select { padding: 8px; border-radius: 6px; border: 1px solid #d9d9d9; background: white; }
 
-        /* 录入区 */
-        .date-input-wrap { text-align: center; margin-bottom: 20px; }
-        .date-input-wrap input { padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; font-family: inherit; }
+        /* Redeem Section */
+        .redeem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .redeem-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
+        .redeem-item.ready { border-color: var(--yellow); background: #fffdf0; }
+        .redeem-item.locked { opacity: 0.4; filter: grayscale(1); }
         
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px; color: #70757a; font-size: 13px; border-bottom: 2px solid #f1f3f4; }
-        td { padding: 15px 12px; border-bottom: 1px solid #f1f3f4; }
-        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; }
-        .btn-save { width: 100%; padding: 20px; background: var(--primary); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 20px; }
-        
-        /* Golden Ticket 专属颜色 */
-        option[value="Golden Ticket"] { color: var(--gold); font-weight: bold; }
+        .btn-save { margin-top: 20px; width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-meta">
-        <span id="syncStat">📡 Syncing...</span>
-        <button class="btn-token" onclick="updateToken()">Update Token</button>
-    </div>
-
-    <div class="tabs">
-        <button class="tab active" id="btn-checkin" onclick="switchTab('checkin')">Daily Log</button>
-        <button class="tab" id="btn-history" onclick="switchTab('history')">History Archive</button>
-    </div>
-
-    <div id="checkin" class="section active">
-        <div class="date-input-wrap">
-            <label style="display:block; margin-bottom:8px; font-size:12px; color:#70757a">Select Date to Edit:</label>
-            <input type="date" id="logDate" onchange="loadData()">
+    <div class="header">
+        <h2 style="margin:0; color:var(--primary)">⚡ Bolt Team Hub</h2>
+        <div style="text-align: right">
+            <div id="syncStat" style="font-size: 11px; color: #888;">📡 Initializing...</div>
+            <button class="btn-token" onclick="updateToken()">Settings</button>
         </div>
-        <table>
-            <thead><tr><th>Member</th><th>Status</th></tr></thead>
-            <tbody id="teamBody"></tbody>
-        </table>
-        <button class="btn-save" id="saveBtn" onclick="uploadToGitHub()">Push Updates to GitHub</button>
     </div>
 
-    <div id="history" class="section">
+    <div class="card streak-hero">
+        <span style="font-size: 14px; color: #70757a; font-weight: bold; text-transform: uppercase;">Current Team Streak</span>
+        <span class="streak-number" id="streakDisplay">0</span>
+        <div class="redeem-grid" id="redeemList"></div>
+    </div>
+
+    <div class="card">
         <div class="calendar-nav">
-            <button onclick="changeMonth(-1)">◀ Prev</button>
-            <h4 id="monthDisplay">Month Year</h4>
-            <button onclick="changeMonth(1)">Next ▶</button>
+            <button onclick="changeMonth(-1)">◀</button>
+            <h3 id="monthDisplay" style="margin:0">Month Year</h3>
+            <button onclick="changeMonth(1)">▶</button>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
+        <p style="font-size: 11px; color: #9aa0a6; text-align: center; margin-top: 15px;">💡 Click any day to view details or edit attendance.</p>
+    </div>
 
-        <div id="historyDetail" class="history-detail">
-            <h4 id="detailTitle" style="margin-top:0">Selection Details</h4>
-            <div id="detailContent"></div>
-            <button onclick="editThisDay()" style="margin-top:15px; width:100%; padding:8px; border-radius:6px; border:1px solid var(--primary); color:var(--primary); background:none; cursor:pointer">Edit This Day</button>
+    <div class="card" id="editBlock">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ffe58f; padding-bottom: 10px;">
+            <h3 style="margin:0; color: #856404;" id="editTitle">Edit Attendance</h3>
+            <button onclick="closeEdit()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#856404;">&times;</button>
         </div>
-
-        <div style="background: #fff9c4; border: 1px dashed var(--yellow); padding: 20px; border-radius: 12px; margin-top: 25px;">
-            <p style="margin:0">Team Streak: <strong id="streakDisplay" style="color:var(--success)">0</strong> Days</p>
-        </div>
+        <div class="edit-grid" id="editGrid"></div>
+        <button class="btn-save" id="saveBtn" onclick="uploadToGitHub()">Save Changes to GitHub</button>
     </div>
 </div>
 
@@ -103,23 +92,12 @@
     const GITHUB_REPO = "Bolt-Clock-In";
     const FILE_PATH = "data.csv";
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
-    // 增加了 Golden Ticket 选项
     const options = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
     
     let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
     let csvData = [];
     let viewDate = new Date();
-    let selectedDateForDetail = "";
-
-    document.getElementById('logDate').valueAsDate = new Date();
-
-    function switchTab(id) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        document.getElementById('btn-' + id).classList.add('active');
-        if(id === 'history') renderHistory();
-    }
+    let activeEditingDate = "";
 
     function updateToken() {
         const t = prompt("Enter GitHub Token:");
@@ -127,43 +105,44 @@
     }
 
     async function loadData() {
-        if(!GITHUB_TOKEN) return;
-        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+        if(!GITHUB_TOKEN) return document.getElementById('syncStat').innerText = "🔑 Token Missing";
+        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}?t=${Date.now()}`;
         try {
             const resp = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
             const json = await resp.json();
             const content = decodeURIComponent(escape(atob(json.content)));
             csvData = content.split('\n').filter(l => l.trim() !== "").map(l => l.split(','));
-            document.getElementById('syncStat').innerHTML = "✅ Synced";
-            
-            // 填充表单
-            const dateVal = document.getElementById('logDate').value;
-            const record = csvData.find(row => row[0] === dateVal);
-            team.forEach((n, i) => {
-                const el = document.getElementById(`sel-${n}`);
-                el.value = (record && record[i+1]) ? record[i+1] : "On Time";
-            });
-        } catch(e) { document.getElementById('syncStat').innerHTML = "❌ Sync Error"; }
+            document.getElementById('syncStat').innerText = "✅ Synced with CSV";
+            refreshUI();
+        } catch(e) { document.getElementById('syncStat').innerText = "❌ Sync Error"; }
     }
 
-    function changeMonth(step) {
-        viewDate.setMonth(viewDate.getMonth() + step);
-        renderHistory();
-    }
-
-    function renderHistory() {
-        // Streak 计算逻辑：Late 会中断，但 Golden Ticket 不会
+    function refreshUI() {
+        // Calculate Streak
         const sorted = csvData.slice(1).sort((a, b) => new Date(a[0]) - new Date(b[0]));
         let streak = 0;
         sorted.forEach(row => { 
             const d = new Date(row[0]);
             if (d.getDay() !== 0 && d.getDay() !== 6) {
-                const hasLate = row.slice(1).includes("Late");
-                streak = hasLate ? 0 : streak + 1; 
+                streak = row.slice(1).includes("Late") ? 0 : streak + 1; 
             }
         });
         document.getElementById('streakDisplay').innerText = streak;
 
+        // Render Rewards
+        const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
+        const redeemed = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
+        document.getElementById('redeemList').innerHTML = milestones.map(m => `
+            <div class="redeem-item ${streak >= m.d ? 'ready' : 'locked'}">
+                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${streak >= m.d ? '' : 'disabled'} onchange="toggleRedeem('s${m.d}')">
+                <span style="font-size:12px;"><b>${m.d}D:</b> ${m.t}</span>
+            </div>
+        `).join('');
+
+        renderCalendar();
+    }
+
+    function renderCalendar() {
         document.getElementById('monthDisplay').innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         const cal = document.getElementById('calendarGrid');
         cal.innerHTML = '';
@@ -186,72 +165,80 @@
             const row = csvData.find(r => r[0] === curDate);
             let cls = '', label = '';
             if(row) {
-                const isLate = row.slice(1).includes("Late");
-                const hasTicket = row.slice(1).includes("Golden Ticket");
-                cls = isLate ? 'day-fail' : 'day-success';
-                label = isLate ? '<span>LATE</span>' : (hasTicket ? '<span style="color:var(--gold)">TICKET</span>' : '<span>OK</span>');
+                const fail = row.slice(1).includes("Late");
+                const ticket = row.slice(1).includes("Golden Ticket");
+                cls = fail ? 'day-fail' : 'day-success';
+                label = fail ? '<span>LATE</span>' : (ticket ? '<span style="color:var(--gold)">TICKET</span>' : '<span>OK</span>');
             }
-            cal.innerHTML += `<div class="cal-day ${cls}" id="cal-${curDate}" onclick="showDetail('${curDate}')"><strong>${d}</strong>${label}</div>`;
+            const activeCls = (activeEditingDate === curDate) ? 'active' : '';
+            cal.innerHTML += `<div class="cal-day ${cls} ${activeCls}" onclick="openEdit('${curDate}')"><strong>${d}</strong>${label}</div>`;
         }
     }
 
-    function showDetail(dateStr) {
-        selectedDateForDetail = dateStr;
-        document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('day-active'));
-        document.getElementById(`cal-${dateStr}`)?.classList.add('day-active');
+    function openEdit(dateStr) {
+        activeEditingDate = dateStr;
+        renderCalendar(); // Refresh to show active border
         
         const row = csvData.find(r => r[0] === dateStr);
-        const detailBox = document.getElementById('historyDetail');
-        const content = document.getElementById('detailContent');
-        document.getElementById('detailTitle').innerText = "Details for " + dateStr;
+        document.getElementById('editTitle').innerText = "Attendance for " + dateStr;
+        const grid = document.getElementById('editGrid');
         
-        if(!row) {
-            content.innerHTML = "<p style='font-size:12px; color:#777'>No data recorded for this day.</p>";
-        } else {
-            content.innerHTML = team.map((name, i) => {
-                const status = row[i+1] || "N/A";
-                let color = "#5f6368";
-                if(status === "Late") color = "var(--danger)";
-                if(status === "On Time") color = "var(--success)";
-                if(status === "Golden Ticket") color = "var(--gold)";
-                return `<div class="detail-item"><span>${name}</span><span class="status-tag" style="color:${color}">${status}</span></div>`;
-            }).join('');
-        }
-        detailBox.style.display = "block";
+        grid.innerHTML = team.map((name, i) => `
+            <div class="edit-item">
+                <label>${name}</label>
+                <select id="edit-sel-${name}">
+                    ${options.map(o => `<option value="${o}" ${(row && row[i+1] === o) ? 'selected' : ''}>${o}</option>`).join('')}
+                </select>
+            </div>
+        `).join('');
+        
+        document.getElementById('editBlock').style.display = "block";
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
-    function editThisDay() {
-        if(!selectedDateForDetail) return;
-        document.getElementById('logDate').value = selectedDateForDetail;
-        loadData();
-        switchTab('checkin');
+    function closeEdit() {
+        document.getElementById('editBlock').style.display = "none";
+        activeEditingDate = "";
+        renderCalendar();
+    }
+
+    function toggleRedeem(k) {
+        let r = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
+        r[k] = !r[k]; localStorage.setItem('bolt_redeemed', JSON.stringify(r));
+    }
+
+    function changeMonth(step) {
+        viewDate.setMonth(viewDate.getMonth() + step);
+        refreshUI();
     }
 
     async function uploadToGitHub() {
         const btn = document.getElementById('saveBtn');
-        const dateVal = document.getElementById('logDate').value;
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
             const get = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
             const json = await get.json();
             const old = decodeURIComponent(escape(atob(json.content)));
-            const newRow = [dateVal, ...team.map(n => document.getElementById(`sel-${n}`).value)].join(",");
+            
+            const newRow = [activeEditingDate, ...team.map(n => document.getElementById(`edit-sel-${n}`).value)].join(",");
             let lines = old.split('\n').filter(l => l.trim() !== "");
-            const idx = lines.findIndex(l => l.startsWith(dateVal));
+            const idx = lines.findIndex(l => l.startsWith(activeEditingDate));
             if(idx !== -1) lines[idx] = newRow; else lines.push(newRow);
 
             await fetch(url, {
                 method: "PUT",
                 headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Update ${dateVal}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
+                body: JSON.stringify({ message: `Update ${activeEditingDate}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
             });
-            alert("Updated Successfully!"); await loadData();
-        } catch(e) { alert("Save Failed!"); }
-        btn.disabled = false; btn.innerText = "Push Updates to GitHub";
+            
+            alert("Success! Data synced.");
+            await loadData();
+            closeEdit();
+        } catch(e) { alert("Error saving to GitHub."); }
+        btn.disabled = false; btn.innerText = "Save Changes to GitHub";
     }
 
-    document.getElementById('teamBody').innerHTML = team.map(n => `<tr><td><strong>${n}</strong></td><td><select id="sel-${n}">${options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></td></tr>`).join('');
     loadData();
 </script>
 </body>
