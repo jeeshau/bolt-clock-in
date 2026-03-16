@@ -3,111 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Tracker</title>
+    <title>Bolt Team Clock-In</title>
     <style>
-        :root { --primary: #1a73e8; --success: #188038; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 20px; color: #3c4043; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        /* Tab 样式 */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #70757a; border-bottom: 3px solid transparent; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #e8f0fe; }
+        .section { display: none; }
+        .section.active { display: block; }
+
+        /* 奖惩进度条 */
         .rewards-banner { display: flex; justify-content: space-around; background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .reward-item { text-align: center; opacity: 0.25; font-size: 0.85em; transition: 0.3s; }
         .reward-item.active { opacity: 1; transform: scale(1.1); font-weight: bold; color: var(--success); }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        select { padding: 6px; border-radius: 4px; border: 1px solid #ddd; }
-        .btn-save { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
-        .btn-reset { margin-top: 10px; background: none; border: none; color: #70757a; cursor: pointer; text-decoration: underline; font-size: 12px; display: block; width: 100%; }
+        
+        .status-tag { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        .tag-OnTime { background: #e6f4ea; color: #1e8e3e; }
+        .tag-Late { background: #fce8e6; color: #d93025; }
+        .tag-Remote { background: #fef7e0; color: #f9ab00; }
+
+        .btn-save { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        .btn-reset { margin-top: 30px; background: none; border: none; color: #aaa; cursor: pointer; text-decoration: underline; font-size: 11px; display: block; width: 100%; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 style="text-align: center;">⚡ Bolt Clock-In Game</h1>
+    <h2 style="text-align: center; color: var(--primary);">⚡ Bolt Team Tracker</h2>
 
-    <div class="rewards-banner" id="rewardBanner">
-        <div class="reward-item" id="reward-5">🥐<br>5D: B-fast</div>
-        <div class="reward-item" id="reward-10">🍱<br>10D: Lunch</div>
-        <div class="reward-item" id="reward-15">🏠<br>15D: Remote</div>
-        <div class="reward-item" id="reward-30">✈️<br>30D: Day Off</div>
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('checkin')">Daily Log</button>
+        <button class="tab" onclick="switchTab('history')">History Archive</button>
     </div>
 
-    <div style="text-align: center; margin-bottom: 10px;">
-        <strong>Team Streak: <span id="teamStreak">0</span> Days</strong>
+    <div id="checkin" class="section active">
+        <div class="rewards-banner">
+            <div class="reward-item" id="reward-5">🥐<br>5D: B-fast</div>
+            <div class="reward-item" id="reward-10">🍱<br>10D: Lunch</div>
+            <div class="reward-item" id="reward-15">🏠<br>15D: Remote</div>
+            <div class="reward-item" id="reward-30">✈️<br>30D: Day Off</div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 1.2em;">Team Streak: <strong><span id="teamStreak">0</span> Days</strong></span>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Member</th>
+                    <th>Today's Status</th>
+                    <th>Personal Streak</th>
+                    <th>Tickets</th>
+                </tr>
+            </thead>
+            <tbody id="teamBody"></tbody>
+        </table>
+        <button class="btn-save" onclick="saveToday()">Confirm Today's Log</button>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Member</th>
-                <th>Status</th>
-                <th>Streak</th>
-                <th>Tickets</th>
-            </tr>
-        </thead>
-        <tbody id="teamBody"></tbody>
-    </table>
+    <div id="history" class="section">
+        <h3>Past Logs</h3>
+        <div id="historyContainer"></div>
+    </div>
 
-    <button class="btn-save" onclick="processDay()">Confirm Today's Attendance</button>
-    <button class="btn-reset" onclick="resetAll()">Reset All Data (Careful!)</button>
+    <button class="btn-reset" onclick="resetData()">Reset System</button>
 </div>
 
 <script>
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
-    const options = ["On Time", "Late", "Remote", "OOO", "Office Closed", "PASS", "Sick"];
-    
-    // 从 LocalStorage 加载数据，如果没有则初始化
-    let state = JSON.parse(localStorage.getItem('boltTrackerData')) || {
+    const statusOptions = ["On Time", "Late", "Remote", "OOO", "Office Closed", "PASS", "Sick"];
+
+    // 从本地读取数据
+    let state = JSON.parse(localStorage.getItem('bolt_data_v3')) || {
         teamStreak: 0,
+        history: [],
         members: team.reduce((acc, name) => {
-            acc[name] = { personalStreak: 0, tickets: 0 };
+            acc[name] = { streak: 0, tickets: 0 };
             return acc;
         }, {})
     };
 
-    function init() {
-        const tbody = document.getElementById('teamBody');
-        tbody.innerHTML = '';
+    function switchTab(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+        if(id === 'history') renderHistory();
+    }
+
+    function initTable() {
+        const body = document.getElementById('teamBody');
+        body.innerHTML = '';
         team.forEach(name => {
             const m = state.members[name];
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><strong>${name}</strong></td>
-                <td>
-                    <select id="status-${name}">
-                        ${options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-                    </select>
-                </td>
-                <td>${m.personalStreak}d</td>
-                <td>${m.tickets} 🎫</td>
+            body.innerHTML += `
+                <tr>
+                    <td><strong>${name}</strong></td>
+                    <td>
+                        <select id="sel-${name}">
+                            ${statusOptions.map(o => `<option value="${o}">${o}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>${m.streak}d</td>
+                    <td>${m.tickets} 🎫</td>
+                </tr>
             `;
-            tbody.appendChild(row);
         });
         updateUI();
     }
 
-    function processDay() {
-        let allOnTime = true;
+    function saveToday() {
+        const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const dailyRecord = { date: todayStr, data: {} };
+        let teamSuccess = true;
+
         team.forEach(name => {
-            const status = document.getElementById(`status-${name}`).value;
+            const status = document.getElementById(`sel-${name}`).value;
+            dailyRecord.data[name] = status;
             const m = state.members[name];
 
-            if (status === "On Time") {
-                m.personalStreak++;
-                if (m.personalStreak % 10 === 0) m.tickets++;
-            } else if (status === "Late") {
-                if (m.tickets > 0 && confirm(`${name} is late! Use a Golden Ticket?`)) {
+            if(status === "On Time") {
+                m.streak++;
+                if(m.streak % 10 === 0) m.tickets++;
+            } else if(status === "Late") {
+                if(m.tickets > 0 && confirm(`${name} is late! Burn a Golden Ticket?`)) {
                     m.tickets--;
                 } else {
-                    m.personalStreak = 0;
-                    allOnTime = false;
+                    m.streak = 0;
+                    teamSuccess = false;
                 }
-            } else if (status !== "Remote" && status !== "Office Closed") {
-                m.personalStreak = 0; // 其他状态不记连胜
+            } else if(status !== "Remote" && status !== "Office Closed") {
+                m.streak = 0;
             }
         });
 
-        state.teamStreak = allOnTime ? state.teamStreak + 1 : 0;
-        localStorage.setItem('boltTrackerData', JSON.stringify(state));
-        init();
+        state.teamStreak = teamSuccess ? state.teamStreak + 1 : 0;
+        state.history.unshift(dailyRecord); // 放在历史记录第一条
+        localStorage.setItem('bolt_data_v3', JSON.stringify(state));
+        initTable();
+        alert("Daily log saved!");
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('historyContainer');
+        if(state.history.length === 0) {
+            container.innerHTML = "<p>No history yet.</p>";
+            return;
+        }
+        container.innerHTML = state.history.map(entry => `
+            <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
+                <div style="font-weight: bold; margin-bottom: 8px; color: #555;">📅 ${entry.date}</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
+                    ${Object.entries(entry.data).map(([n, s]) => `
+                        <div style="font-size: 12px;">${n}: <span class="status-tag tag-${s.replace(' ', '')}">${s}</span></div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
     }
 
     function updateUI() {
@@ -117,14 +177,14 @@
         });
     }
 
-    function resetAll() {
-        if(confirm("Are you sure? This clears all streaks and tickets!")) {
+    function resetData() {
+        if(confirm("DANGER: Clear all streaks and history?")) {
             localStorage.clear();
             location.reload();
         }
     }
 
-    init();
+    initTable();
 </script>
 </body>
 </html>
