@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Hub - Streak Fix</title>
+    <title>Bolt Team Hub - Logic Pro</title>
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
@@ -14,20 +14,23 @@
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; }
-        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; }
-        .cal-day.active { border: 3px solid var(--primary); }
+        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; position: relative; }
+        .cal-day.active { outline: 3px solid var(--primary); z-index: 5; }
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
         .cal-day span { font-size: 8px; font-weight: bold; margin-top: 4px; }
         .wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-        .wallet-item { background: #fffdf0; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; text-align: center; }
+        .wallet-item { background: #fffdf0; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; text-align: center; position: relative; }
+        .progress-container { width: 100%; background: #eee; height: 4px; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--gold); transition: 0.3s; }
         .redeem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         .redeem-item { display: flex; align-items: center; gap: 12px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #eee; }
         .redeem-item.ready { border-color: var(--yellow); background: #fffef0; }
-        #editBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; }
-        .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
-        select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; }
+        #editBlock, #transferBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; margin-top: 10px; }
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
+        select, input { padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; }
         .btn-main { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-sub { background: none; border: 1px solid #ddd; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; color: #666; }
     </style>
 </head>
 <body>
@@ -45,8 +48,20 @@
     </div>
 
     <div class="card">
-        <h3 style="margin:0 0 15px 0">🎫 Member Wallet (Every 10 OnTime/Remote = 1🎫)</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0">🎫 Member Wallet</h3>
+            <button class="btn-sub" onclick="toggleBlock('transferBlock')">Transfer Ticket</button>
+        </div>
         <div class="wallet-grid" id="walletGrid"></div>
+
+        <div id="transferBlock" class="card" style="box-shadow:none; margin-top:15px; border-style:dashed;">
+            <h4 style="margin:0 0 10px 0; color:#856404">Ticket Transfer</h4>
+            <div class="action-grid" style="margin:0">
+                <select id="tfFrom"><option value="">From...</option></select>
+                <select id="tfTo"><option value="">To...</option></select>
+                <button class="btn-main" onclick="executeTransfer()" style="padding:10px">Send 1 Ticket 🎫</button>
+            </div>
+        </div>
     </div>
 
     <div class="card">
@@ -60,7 +75,7 @@
 
     <div class="card" id="editBlock">
         <h3 style="margin:0; color: #856404;" id="editTitle">Edit Attendance</h3>
-        <div class="edit-grid" id="editGrid"></div>
+        <div class="action-grid" id="editGrid"></div>
         <button class="btn-main" id="saveBtn" onclick="saveAttendance()">Update GitHub CSV</button>
     </div>
 </div>
@@ -73,7 +88,9 @@
     const statusOpts = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
     const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
 
-    let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
+    let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token') || prompt("Enter Token:");
+    localStorage.setItem('bolt_gh_token', GITHUB_TOKEN);
+
     let csvData = [];
     let viewDate = new Date();
     let activeDate = "";
@@ -94,48 +111,41 @@
     function refresh() {
         const wallet = team.reduce((acc, n) => { acc[n] = { balance: 0, progress: 0 }; return acc; }, {});
         const redeemed = {};
-        const attendanceRows = csvData.filter(row => row[0] !== "Date" && row[0] !== "REDEEM" && row[0] !== "TRANSFER");
+        const attendanceRows = [];
 
-        // 1. 严格按日期排序计算 Streak 和 Ticket
+        // 1. 分类数据
+        csvData.forEach(row => {
+            if (row[0] === "REDEEM") redeemed[row[1]] = true;
+            else if (row[0] === "TRANSFER") { wallet[row[1]].balance--; wallet[row[2]].balance++; }
+            else if (row[0] !== "Date") attendanceRows.push(row);
+        });
+
+        // 2. 排序并计算全局 Streak 和个人 Ticket 累积
         const sorted = attendanceRows.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-        
-        let globalStreak = 0;
+        let streak = 0;
         sorted.forEach(row => {
             const d = new Date(row[0]);
-            // 只有周一到周五计入连胜
-            if (d.getDay() % 6 !== 0) {
-                const hasLate = row.slice(1).includes("Late");
-                globalStreak = hasLate ? 0 : globalStreak + 1;
+            if (d.getDay() % 6 !== 0) { // 工作日
+                streak = row.slice(1).includes("Late") ? 0 : streak + 1;
             }
-
-            // 计算个人 Ticket: On Time 或 Remote 计入进度
             team.forEach((name, i) => {
-                const status = row[i+1];
-                if (status === "On Time" || status === "Remote") {
+                const s = row[i+1];
+                if (s === "On Time" || s === "Remote") {
                     wallet[name].progress++;
-                    if (wallet[name].progress >= 10) {
-                        wallet[name].balance++;
-                        wallet[name].progress = 0;
-                    }
-                } else if (status === "Golden Ticket") {
+                    if (wallet[name].progress >= 10) { wallet[name].balance++; wallet[name].progress = 0; }
+                } else if (s === "Golden Ticket") {
                     wallet[name].balance--;
                 }
             });
         });
 
-        // 处理手动转账和赎回
-        csvData.forEach(row => {
-            if (row[0] === "REDEEM") redeemed[row[1]] = true;
-            if (row[0] === "TRANSFER") { wallet[row[1]].balance--; wallet[row[2]].balance++; }
-        });
-
         walletState = wallet;
-        document.getElementById('streakDisplay').innerText = globalStreak;
+        document.getElementById('streakDisplay').innerText = streak;
         
         // 渲染奖励
         document.getElementById('redeemList').innerHTML = milestones.map(m => `
-            <div class="redeem-item ${globalStreak >= m.d ? 'ready' : 'locked'}">
-                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${globalStreak >= m.d ? '' : 'disabled'} onchange="syncRedeem('s${m.d}')">
+            <div class="redeem-item ${streak >= m.d ? 'ready' : 'locked'}">
+                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${streak >= m.d ? '' : 'disabled'} onchange="syncCSV('REDEEM','${m.d}')">
                 <span style="font-size:12px"><b>${m.d}D:</b> ${m.t}</span>
             </div>
         `).join('');
@@ -143,13 +153,27 @@
         // 渲染钱包
         document.getElementById('walletGrid').innerHTML = team.map(n => `
             <div class="wallet-item">
-                <small>${n}</small><br>
-                <b>${wallet[n].balance}🎫</b><br>
-                <progress value="${wallet[n].progress}" max="10" style="width:80%; height:4px;"></progress>
+                <small style="font-weight:bold">${n}</small><br>
+                <b style="color:var(--gold); font-size:1.2em">${wallet[n].balance}🎫</b>
+                <div class="progress-container"><div class="progress-bar" style="width:${(wallet[n].progress/10)*100}%"></div></div>
             </div>
         `).join('');
 
+        // 填充转账下拉菜单
+        const from = document.getElementById('tfFrom'); const to = document.getElementById('tfTo');
+        if(from.options.length <= 1) {
+            team.forEach(n => { from.add(new Option(n, n)); to.add(new Option(n, n)); });
+        }
+
         renderCalendar();
+    }
+
+    async function executeTransfer() {
+        const from = document.getElementById('tfFrom').value;
+        const to = document.getElementById('tfTo').value;
+        if(!from || !to || from === to) return alert("Invalid transfer");
+        if(walletState[from].balance <= 0) return alert(`${from} has no tickets!`);
+        await syncCSV("TRANSFER", `${from},${to}`);
     }
 
     async function saveAttendance() {
@@ -158,31 +182,37 @@
                 return alert(`❌ ${n} has no tickets!`);
             }
         }
-        const btn = document.getElementById('saveBtn');
-        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        const newRow = [activeDate, ...team.map(n => document.getElementById(`edit-${n}`).value)].join(",");
+        await syncCSV("LOG", newRow, activeDate);
+        document.getElementById('editBlock').style.display = "none";
+    }
+
+    async function syncCSV(type, data, matchStr = null) {
+        const btn = document.getElementById('saveBtn'); btn.disabled = true;
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
             const get = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
             const json = await get.json();
-            const lines = decodeURIComponent(escape(atob(json.content))).split('\n');
-            const newRow = [activeDate, ...team.map(n => document.getElementById(`edit-${n}`).value)].join(",");
-            const idx = lines.findIndex(l => l.startsWith(activeDate));
-            if(idx !== -1) lines[idx] = newRow; else lines.push(newRow);
-            await fetch(url, { method: "PUT", headers: { 'Authorization': `token ${GITHUB_TOKEN}` }, body: JSON.stringify({ message: `Log ${activeDate}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha }) });
-            alert("Success!"); load(); document.getElementById('editBlock').style.display = "none";
-        } catch(e) { alert("Fail"); }
-        btn.disabled = false; btn.innerText = "Update GitHub CSV";
-    }
+            let lines = decodeURIComponent(escape(atob(json.content))).split('\n').filter(l => l.trim() !== "");
+            
+            if (type === "REDEEM") {
+                const idx = lines.findIndex(l => l.startsWith(`REDEEM,s${data}`));
+                if (idx !== -1) lines.splice(idx, 1); else lines.push(`REDEEM,s${data},${new Date().toISOString().split('T')[0]}`);
+            } else if (type === "TRANSFER") {
+                lines.push(`TRANSFER,${data},${new Date().toISOString().split('T')[0]}`);
+            } else { // LOG
+                const idx = lines.findIndex(l => l.startsWith(matchStr));
+                if (idx !== -1) lines[idx] = data; else lines.push(data);
+            }
 
-    async function syncRedeem(id) {
-        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-        const get = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
-        const json = await get.json();
-        let lines = decodeURIComponent(escape(atob(json.content))).split('\n');
-        const idx = lines.findIndex(l => l.startsWith(`REDEEM,${id}`));
-        if (idx !== -1) lines.splice(idx, 1); else lines.push(`REDEEM,${id},${new Date().toISOString().split('T')[0]}`);
-        await fetch(url, { method: "PUT", headers: { 'Authorization': `token ${GITHUB_TOKEN}` }, body: JSON.stringify({ message: "Redeem", content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha }) });
-        load();
+            const put = await fetch(url, {
+                method: "PUT",
+                headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `Bolt Update: ${type}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
+            });
+            if(put.ok) { alert("Success!"); load(); } else throw new Error();
+        } catch(e) { alert("Action Failed"); }
+        btn.disabled = false;
     }
 
     function renderCalendar() {
@@ -209,13 +239,16 @@
     function openEdit(ds) {
         activeDate = ds; renderCalendar();
         const row = csvData.find(r => r[0] === ds);
-        document.getElementById('editBlock').style.display = "block";
+        const eb = document.getElementById('editBlock'); eb.style.display = "block";
+        document.getElementById('editTitle').innerText = "Log: " + ds;
         document.getElementById('editGrid').innerHTML = team.map((n, i) => `
             <div style="display:flex; flex-direction:column"><label style="font-size:10px;font-weight:bold">${n}</label>
             <select id="edit-${n}">${statusOpts.map(o => `<option value="${o}" ${(row && row[i+1] === o) ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
         `).join('');
+        eb.scrollIntoView({ behavior: 'smooth' });
     }
 
+    function toggleBlock(id) { const b = document.getElementById(id); b.style.display = b.style.display === "none" ? "block" : "none"; }
     function changeMonth(s) { viewDate.setMonth(viewDate.getMonth() + s); renderCalendar(); }
     load();
 </script>
