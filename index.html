@@ -2,242 +2,134 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Clock-In</title>
+    <title>Bolt Team Live Sync</title>
     <style>
-        :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        
-        /* Tab Styling */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
-        .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #70757a; border-bottom: 3px solid transparent; }
-        .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #e8f0fe; }
-        .section { display: none; }
-        .section.active { display: block; }
-
-        /* Rewards Bar */
-        .rewards-banner { display: flex; justify-content: space-around; background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .reward-item { text-align: center; opacity: 0.25; font-size: 0.85em; transition: 0.3s; }
-        .reward-item.active { opacity: 1; transform: scale(1.1); font-weight: bold; color: var(--success); }
-
-        /* Date Selection Box - 重点更新 */
-        .date-picker-box { 
-            background: #fff9c4; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-bottom: 20px; 
-            text-align: center; 
-            border: 1px dashed #fbc02d;
-        }
-        .date-picker-box label { font-weight: bold; margin-right: 10px; }
-        input[type="date"] { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; cursor: pointer; }
-
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        :root { --primary: #1a73e8; --bg: #f8f9fa; }
+        body { font-family: sans-serif; background: var(--bg); padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .sync-status { font-size: 12px; color: #666; margin-bottom: 10px; text-align: right; }
+        .date-box { background: #fffde7; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px dashed #fbc02d; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        
-        .status-tag { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
-        .tag-OnTime { background: #e6f4ea; color: #1e8e3e; }
-        .tag-Late { background: #fce8e6; color: #d93025; }
-        .tag-Remote { background: #fef7e0; color: #f9ab00; }
-
-        .btn-save { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .btn-reset { margin-top: 30px; background: none; border: none; color: #aaa; cursor: pointer; text-decoration: underline; font-size: 11px; display: block; width: 100%; }
+        .btn-save { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .loading { opacity: 0.5; pointer-events: none; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 style="text-align: center; color: var(--primary);">⚡ Bolt Team Clock-In Game</h2>
+<div class="container" id="mainApp">
+    <h2 style="text-align: center;">🔄 Bolt Live Sync Tracker</h2>
+    <div class="sync-status" id="status">Checking GitHub Sync...</div>
 
-    <div class="tabs">
-        <button class="tab active" onclick="switchTab('checkin')">Daily Log</button>
-        <button class="tab" onclick="switchTab('history')">History Archive</button>
+    <div class="date-box">
+        <label><b>Target Date: </b></label>
+        <input type="date" id="logDate">
     </div>
 
-    <div id="checkin" class="section active">
-        <div class="rewards-banner">
-            <div class="reward-item" id="reward-5">🥐<br>5D: B-fast</div>
-            <div class="reward-item" id="reward-10">🍱<br>10D: Lunch</div>
-            <div class="reward-item" id="reward-15">🏠<br>15D: Remote</div>
-            <div class="reward-item" id="reward-30">✈️<br>30D: Day Off</div>
-        </div>
+    <table>
+        <thead><tr><th>Member</th><th>Status</th></tr></thead>
+        <tbody id="teamBody"></tbody>
+    </table>
 
-        <div class="date-picker-box">
-            <label for="logDate">Select Date to Log:</label>
-            <input type="date" id="logDate">
-            <div style="font-size: 11px; color: #666; margin-top: 5px;">(You can select past dates to fill in missing records)</div>
-        </div>
-
-        <div style="text-align: center; margin-bottom: 20px;">
-            <span style="font-size: 1.2em;">Team Streak: <strong><span id="teamStreak">0</span> Days</strong></span>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Member</th>
-                    <th>Status</th>
-                    <th>Streak</th>
-                    <th>Tickets</th>
-                </tr>
-            </thead>
-            <tbody id="teamBody"></tbody>
-        </table>
-        <button class="btn-save" onclick="saveData()">Confirm & Save Entry</button>
-    </div>
-
-    <div id="history" class="section">
-        <h3>Past Logs (Latest First)</h3>
-        <div id="historyContainer"></div>
-    </div>
-
-    <button class="btn-reset" onclick="resetData()">Reset Entire System</button>
+    <button class="btn-save" id="saveBtn" onclick="uploadToGitHub()">Push Updates to GitHub (CSV)</button>
+    <p style="font-size: 11px; color: #999; text-align: center; margin-top: 15px;">
+        All changes will be reflected in <b>data.csv</b> in your repository.
+    </p>
 </div>
 
 <script>
+    // --- 配置区 ---
+    const GITHUB_USER = "Jeeshau";
+    const GITHUB_REPO = "Bolt-Clock-In";
+    const FILE_PATH = "data.csv";
+    const GITHUB_TOKEN = "在此粘贴你的_TOKEN"; // 重要：不要泄露此 Token 给他人
+    
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
-    const statusOptions = ["On Time", "Late", "Remote", "OOO", "Office Closed", "PASS", "Sick"];
+    const options = ["On Time", "Late", "Remote", "OOO", "Sick", "PASS"];
+    let currentSha = ""; // GitHub API 需要这个来更新文件
 
-    // 默认日期设为今天
     document.getElementById('logDate').valueAsDate = new Date();
 
-    let state = JSON.parse(localStorage.getItem('bolt_v4_data')) || {
-        history: [], // [{date: '2026-03-16', data: {...}}]
-        members: team.reduce((acc, name) => {
-            acc[name] = { tickets: 0 };
-            return acc;
-        }, {})
-    };
-
-    function switchTab(id) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.currentTarget.classList.add('active');
-        if(id === 'history') renderHistory();
+    // 1. 从 GitHub 读取数据
+    async function loadFromGitHub() {
+        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+        try {
+            const resp = await fetch(url, { headers: { Authorization: `token ${GITHUB_TOKEN}` } });
+            const json = await resp.json();
+            currentSha = json.sha;
+            
+            // 解码 Base64 内容
+            const content = decodeURIComponent(escape(atob(json.content)));
+            console.log("CSV Loaded:", content);
+            document.getElementById('status').innerText = "✅ Synced with GitHub data.csv";
+            
+            initTable();
+        } catch (err) {
+            document.getElementById('status').innerText = "❌ Sync Failed: Check Token/Path";
+        }
     }
 
     function initTable() {
         const body = document.getElementById('teamBody');
-        body.innerHTML = '';
-        const stats = calculateStreaks();
-        
-        team.forEach(name => {
-            const m = state.members[name];
-            body.innerHTML += `
-                <tr>
-                    <td><strong>${name}</strong></td>
-                    <td>
-                        <select id="sel-${name}">
-                            ${statusOptions.map(o => `<option value="${o}">${o}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td>${stats.personal[name] || 0}d</td>
-                    <td>${m.tickets} 🎫</td>
-                </tr>
-            `;
-        });
-        document.getElementById('teamStreak').innerText = stats.team;
-        updateRewards(stats.team);
-    }
-
-    // 重新计算所有 Streak
-    function calculateStreaks() {
-        // 按时间从小到大排
-        const sorted = [...state.history].sort((a, b) => new Date(a.date) - new Date(b.date));
-        let teamStreak = 0;
-        let personal = {};
-        team.forEach(n => personal[n] = 0);
-
-        sorted.forEach(day => {
-            let dayPerfect = true;
-            team.forEach(name => {
-                const s = day.data[name];
-                if(s === "On Time") {
-                    personal[name]++;
-                } else if(s === "Remote" || s === "Office Closed") {
-                    // Streak 维持但不加数字，或是根据你们规矩改
-                } else {
-                    personal[name] = 0;
-                    dayPerfect = false;
-                }
-            });
-            teamStreak = dayPerfect ? teamStreak + 1 : 0;
-        });
-        return { team: teamStreak, personal: personal };
-    }
-
-    function saveData() {
-        const dateVal = document.getElementById('logDate').value;
-        if(!dateVal) return alert("Please select a date!");
-
-        const daily = { date: dateVal, data: {} };
-        team.forEach(n => daily.data[n] = document.getElementById(`sel-${n}`).value);
-
-        // 检查重复
-        const idx = state.history.findIndex(h => h.date === dateVal);
-        if(idx !== -1) {
-            if(!confirm("Data for " + dateVal + " already exists. Overwrite?")) return;
-            state.history[idx] = daily;
-        } else {
-            state.history.push(daily);
-        }
-
-        // 处理 Golden Tickets (简易逻辑：每10天给一张)
-        // 实际操作中你可以在 MCIT 进阶课里学如何更精准地通过历史记录发放
-        const finalStats = calculateStreaks();
-        team.forEach(n => {
-            if(finalStats.personal[n] > 0 && finalStats.personal[name] % 10 === 0) {
-                // state.members[n].tickets++; // 自动增加逻辑
-            }
-        });
-
-        localStorage.setItem('bolt_v4_data', JSON.stringify(state));
-        initTable();
-        alert("Log saved for " + dateVal + "!");
-    }
-
-    function renderHistory() {
-        const container = document.getElementById('historyContainer');
-        if(state.history.length === 0) return container.innerHTML = "<p>No logs found.</p>";
-
-        const sorted = [...state.history].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        container.innerHTML = sorted.map(entry => `
-            <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
-                <div style="font-weight: bold; margin-bottom: 8px; display:flex; justify-content:space-between;">
-                    <span>📅 ${entry.date}</span>
-                    <button onclick="deleteRec('${entry.date}')" style="color:red; background:none; border:none; cursor:pointer; font-size:10px;">[Delete]</button>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
-                    ${Object.entries(entry.data).map(([n, s]) => `
-                        <div style="font-size: 11px;">${n}: <span class="status-tag tag-${s.replace(' ', '')}">${s}</span></div>
-                    `).join('')}
-                </div>
-            </div>
+        body.innerHTML = team.map(n => `
+            <tr>
+                <td><strong>${n}</strong></td>
+                <td><select id="sel-${n}">${options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></td>
+            </tr>
         `).join('');
     }
 
-    function deleteRec(d) {
-        if(!confirm("Delete record for " + d + "?")) return;
-        state.history = state.history.filter(h => h.date !== d);
-        localStorage.setItem('bolt_v4_data', JSON.stringify(state));
-        renderHistory();
-        initTable();
-    }
+    // 2. 将新记录合并并推送到 GitHub
+    async function uploadToGitHub() {
+        const btn = document.getElementById('saveBtn');
+        const dateVal = document.getElementById('logDate').value;
+        btn.innerText = "Uploading to GitHub...";
+        btn.classList.add('loading');
 
-    function updateRewards(s) {
-        [5, 10, 15, 30].forEach(d => {
-            document.getElementById(`reward-${d}`).classList.toggle('active', s >= d);
+        // 先获取最新的文件内容（防止多人同时操作冲突）
+        const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+        const getResp = await fetch(getUrl, { headers: { Authorization: `token ${GITHUB_TOKEN}` } });
+        const getJson = await getResp.json();
+        const oldContent = decodeURIComponent(escape(atob(getJson.content)));
+        const sha = getJson.sha;
+
+        // 构建新的一行数据
+        const rowData = [dateVal];
+        team.forEach(n => rowData.push(document.getElementById(`sel-${n}`).value));
+        const newRowStr = rowData.join(",");
+
+        // 简单的 CSV 合并逻辑：如果日期已存在则替换，否则新增
+        let lines = oldContent.split("\n").filter(l => l.trim() !== "");
+        const existingIdx = lines.findIndex(l => l.startsWith(dateVal));
+        if (existingIdx !== -1) {
+            lines[existingIdx] = newRowStr;
+        } else {
+            lines.push(newRowStr);
+        }
+        const finalContent = lines.join("\n");
+
+        // 发送 PUT 请求更新 GitHub
+        const putResp = await fetch(getUrl, {
+            method: "PUT",
+            headers: { Authorization: `token ${GITHUB_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                message: `Update attendance for ${dateVal}`,
+                content: btoa(unescape(encodeURIComponent(finalContent))),
+                sha: sha
+            })
         });
+
+        if (putResp.ok) {
+            alert("Success! GitHub CSV has been updated.");
+            loadFromGitHub();
+        } else {
+            alert("Upload failed. Check console for details.");
+        }
+        btn.innerText = "Push Updates to GitHub (CSV)";
+        btn.classList.remove('loading');
     }
 
-    function resetData() {
-        if(confirm("Erase all data?")) { localStorage.clear(); location.reload(); }
-    }
-
-    initTable();
+    loadFromGitHub();
 </script>
 </body>
 </html>
