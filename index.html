@@ -3,33 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Hub - Logic Pro</title>
+    <title>Bolt Team Hub - Streak Fix</title>
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
         .container { max-width: 900px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        
         .streak-hero { text-align: center; background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%); border: 1px solid #d2e3fc; }
         .streak-number { font-size: 3.5rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
-
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; }
-        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; position: relative; }
-        .cal-day.active { border: 3px solid var(--primary); transform: scale(1.02); }
+        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; }
+        .cal-day.active { border: 3px solid var(--primary); }
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
         .cal-day span { font-size: 8px; font-weight: bold; margin-top: 4px; }
-
+        .wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+        .wallet-item { background: #fffdf0; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; text-align: center; }
         .redeem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
         .redeem-item { display: flex; align-items: center; gap: 12px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #eee; }
         .redeem-item.ready { border-color: var(--yellow); background: #fffef0; }
-        .redeem-item.locked { opacity: 0.4; filter: grayscale(1); }
-
-        .wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-        .wallet-item { background: #fffdf0; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; text-align: center; }
-
         #editBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; }
         .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
         select { padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; }
@@ -45,13 +39,13 @@
     </div>
 
     <div class="card streak-hero">
-        <span style="font-size: 12px; font-weight: bold; color: #70757a;">CURRENT STREAK</span>
+        <span style="font-size: 12px; font-weight: bold; color: #70757a;">TOTAL TEAM STREAK</span>
         <div class="streak-number" id="streakDisplay">0</div>
         <div class="redeem-grid" id="redeemList"></div>
     </div>
 
     <div class="card">
-        <h3 style="margin:0 0 15px 0">🎫 Member Wallet</h3>
+        <h3 style="margin:0 0 15px 0">🎫 Member Wallet (Every 10 OnTime/Remote = 1🎫)</h3>
         <div class="wallet-grid" id="walletGrid"></div>
     </div>
 
@@ -59,7 +53,7 @@
         <div class="calendar-nav">
             <button onclick="changeMonth(-1)">◀</button>
             <h3 id="monthDisplay" style="margin:0">Month Year</h3>
-            <button onclick="changeMonth(1)">▶</button>
+            <button onclick="changeMonth(1)">Next ▶</button>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
@@ -79,13 +73,11 @@
     const statusOpts = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
     const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
 
-    let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token') || prompt("Enter Token:");
-    localStorage.setItem('bolt_gh_token', GITHUB_TOKEN);
-
+    let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
     let csvData = [];
     let viewDate = new Date();
     let activeDate = "";
-    let currentWallet = {}; // 存储当前成员余额
+    let walletState = {};
 
     async function load() {
         try {
@@ -100,48 +92,72 @@
     }
 
     function refresh() {
-        // 计算钱包和赎回
-        const wallet = team.reduce((acc, n) => { acc[n] = 0; return acc; }, {});
+        const wallet = team.reduce((acc, n) => { acc[n] = { balance: 0, progress: 0 }; return acc; }, {});
         const redeemed = {};
-        const attendance = [];
+        const attendanceRows = csvData.filter(row => row[0] !== "Date" && row[0] !== "REDEEM" && row[0] !== "TRANSFER");
 
+        // 1. 严格按日期排序计算 Streak 和 Ticket
+        const sorted = attendanceRows.sort((a, b) => new Date(a[0]) - new Date(b[0]));
+        
+        let globalStreak = 0;
+        sorted.forEach(row => {
+            const d = new Date(row[0]);
+            // 只有周一到周五计入连胜
+            if (d.getDay() % 6 !== 0) {
+                const hasLate = row.slice(1).includes("Late");
+                globalStreak = hasLate ? 0 : globalStreak + 1;
+            }
+
+            // 计算个人 Ticket: On Time 或 Remote 计入进度
+            team.forEach((name, i) => {
+                const status = row[i+1];
+                if (status === "On Time" || status === "Remote") {
+                    wallet[name].progress++;
+                    if (wallet[name].progress >= 10) {
+                        wallet[name].balance++;
+                        wallet[name].progress = 0;
+                    }
+                } else if (status === "Golden Ticket") {
+                    wallet[name].balance--;
+                }
+            });
+        });
+
+        // 处理手动转账和赎回
         csvData.forEach(row => {
             if (row[0] === "REDEEM") redeemed[row[1]] = true;
-            else if (row[0] === "TRANSFER") { wallet[row[1]]--; wallet[row[2]]++; }
-            else if (row[0] !== "Date") {
-                attendance.push(row);
-                team.forEach((n, i) => { if (row[i+1] === "Golden Ticket") wallet[n]--; });
-            }
+            if (row[0] === "TRANSFER") { wallet[row[1]].balance--; wallet[row[2]].balance++; }
         });
-        currentWallet = wallet; // 更新全局钱包状态
 
-        // 渲染 UI
-        const sorted = attendance.sort((a, b) => new Date(a[0]) - new Date(b[0]));
-        let streak = 0;
-        sorted.forEach(row => { if (new Date(row[0]).getDay() % 6 !== 0) streak = row.slice(1).includes("Late") ? 0 : streak + 1; });
-        document.getElementById('streakDisplay').innerText = streak;
+        walletState = wallet;
+        document.getElementById('streakDisplay').innerText = globalStreak;
         
+        // 渲染奖励
         document.getElementById('redeemList').innerHTML = milestones.map(m => `
-            <div class="redeem-item ${streak >= m.d ? 'ready' : 'locked'}">
-                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${streak >= m.d ? '' : 'disabled'} onchange="syncRedeem('s${m.d}')">
+            <div class="redeem-item ${globalStreak >= m.d ? 'ready' : 'locked'}">
+                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${globalStreak >= m.d ? '' : 'disabled'} onchange="syncRedeem('s${m.d}')">
                 <span style="font-size:12px"><b>${m.d}D:</b> ${m.t}</span>
             </div>
         `).join('');
 
-        document.getElementById('walletGrid').innerHTML = team.map(n => `<div class="wallet-item"><small>${n}</small><br><b>${wallet[n] < 0 ? 0 : wallet[n]}</b></div>`).join('');
+        // 渲染钱包
+        document.getElementById('walletGrid').innerHTML = team.map(n => `
+            <div class="wallet-item">
+                <small>${n}</small><br>
+                <b>${wallet[n].balance}🎫</b><br>
+                <progress value="${wallet[n].progress}" max="10" style="width:80%; height:4px;"></progress>
+            </div>
+        `).join('');
+
         renderCalendar();
     }
 
     async function saveAttendance() {
-        // 1. 验证 Golden Ticket 余额
         for (let n of team) {
-            const status = document.getElementById(`edit-${n}`).value;
-            if (status === "Golden Ticket" && currentWallet[n] <= 0) {
-                alert(`❌ Error: ${n} does not have any Golden Tickets! Use 'Late' or transfer a ticket first.`);
-                return; // 终止保存
+            if (document.getElementById(`edit-${n}`).value === "Golden Ticket" && walletState[n].balance <= 0) {
+                return alert(`❌ ${n} has no tickets!`);
             }
         }
-
         const btn = document.getElementById('saveBtn');
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         try {
@@ -152,12 +168,7 @@
             const newRow = [activeDate, ...team.map(n => document.getElementById(`edit-${n}`).value)].join(",");
             const idx = lines.findIndex(l => l.startsWith(activeDate));
             if(idx !== -1) lines[idx] = newRow; else lines.push(newRow);
-            
-            await fetch(url, {
-                method: "PUT",
-                headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Log ${activeDate}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
-            });
+            await fetch(url, { method: "PUT", headers: { 'Authorization': `token ${GITHUB_TOKEN}` }, body: JSON.stringify({ message: `Log ${activeDate}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha }) });
             alert("Success!"); load(); document.getElementById('editBlock').style.display = "none";
         } catch(e) { alert("Fail"); }
         btn.disabled = false; btn.innerText = "Update GitHub CSV";
