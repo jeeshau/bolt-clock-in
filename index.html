@@ -9,18 +9,29 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
         .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
+        /* Tab Styling */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
         .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #70757a; border-bottom: 3px solid transparent; }
         .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #e8f0fe; }
         .section { display: none; }
         .section.active { display: block; }
 
+        /* Rewards Bar */
         .rewards-banner { display: flex; justify-content: space-around; background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .reward-item { text-align: center; opacity: 0.25; font-size: 0.85em; transition: 0.3s; }
         .reward-item.active { opacity: 1; transform: scale(1.1); font-weight: bold; color: var(--success); }
 
-        .date-selector { margin-bottom: 20px; padding: 15px; background: #fffde7; border-radius: 8px; border: 1px solid #fff59d; text-align: center; }
-        input[type="date"] { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; }
+        /* Date Selection Box - 重点更新 */
+        .date-picker-box { 
+            background: #fff9c4; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            text-align: center; 
+            border: 1px dashed #fbc02d;
+        }
+        .date-picker-box label { font-weight: bold; margin-right: 10px; }
+        input[type="date"] { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; cursor: pointer; }
 
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
@@ -37,7 +48,7 @@
 <body>
 
 <div class="container">
-    <h2 style="text-align: center; color: var(--primary);">⚡ Bolt Team Tracker</h2>
+    <h2 style="text-align: center; color: var(--primary);">⚡ Bolt Team Clock-In Game</h2>
 
     <div class="tabs">
         <button class="tab active" onclick="switchTab('checkin')">Daily Log</button>
@@ -52,10 +63,10 @@
             <div class="reward-item" id="reward-30">✈️<br>30D: Day Off</div>
         </div>
 
-        <div class="date-selector">
-            <label><strong>Logging for Date: </strong></label>
+        <div class="date-picker-box">
+            <label for="logDate">Select Date to Log:</label>
             <input type="date" id="logDate">
-            <p style="font-size: 0.8em; color: #888; margin: 5px 0 0 0;">(You can backdate logs or update past records)</p>
+            <div style="font-size: 11px; color: #666; margin-top: 5px;">(You can select past dates to fill in missing records)</div>
         </div>
 
         <div style="text-align: center; margin-bottom: 20px;">
@@ -73,20 +84,23 @@
             </thead>
             <tbody id="teamBody"></tbody>
         </table>
-        <button class="btn-save" onclick="saveData()">Confirm & Save to Archive</button>
+        <button class="btn-save" onclick="saveData()">Confirm & Save Entry</button>
     </div>
 
     <div id="history" class="section">
-        <h3>Past Logs (Chronological)</h3>
+        <h3>Past Logs (Latest First)</h3>
         <div id="historyContainer"></div>
     </div>
 
-    <button class="btn-reset" onclick="resetData()">Reset All Data</button>
+    <button class="btn-reset" onclick="resetData()">Reset Entire System</button>
 </div>
 
 <script>
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
     const statusOptions = ["On Time", "Late", "Remote", "OOO", "Office Closed", "PASS", "Sick"];
+
+    // 默认日期设为今天
+    document.getElementById('logDate').valueAsDate = new Date();
 
     let state = JSON.parse(localStorage.getItem('bolt_v4_data')) || {
         history: [], // [{date: '2026-03-16', data: {...}}]
@@ -95,9 +109,6 @@
             return acc;
         }, {})
     };
-
-    // 设置默认日期为今天
-    document.getElementById('logDate').valueAsDate = new Date();
 
     function switchTab(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -110,7 +121,7 @@
     function initTable() {
         const body = document.getElementById('teamBody');
         body.innerHTML = '';
-        const stats = calculateStreaks(); // 连胜次数现在根据历史记录动态计算
+        const stats = calculateStreaks();
         
         team.forEach(name => {
             const m = state.members[name];
@@ -131,107 +142,99 @@
         updateRewards(stats.team);
     }
 
-    // 核心逻辑：基于历史记录自动计算 Streaks
+    // 重新计算所有 Streak
     function calculateStreaks() {
-        // 先按日期从旧到新排序，才能正确计算连胜
-        const sortedHistory = [...state.history].sort((a, b) => new Date(a.date) - new Date(b.date));
-        
+        // 按时间从小到大排
+        const sorted = [...state.history].sort((a, b) => new Date(a.date) - new Date(b.date));
         let teamStreak = 0;
-        let personalStreaks = {};
-        team.forEach(n => personalStreaks[n] = 0);
+        let personal = {};
+        team.forEach(n => personal[n] = 0);
 
-        sortedHistory.forEach(day => {
+        sorted.forEach(day => {
             let dayPerfect = true;
             team.forEach(name => {
-                const status = day.data[name];
-                if(status === "On Time") {
-                    personalStreaks[name]++;
-                } else if (status === "Remote" || status === "Office Closed") {
-                    // 保持连胜但不累加数值？或者累加？这里暂定不累加，保持数字
+                const s = day.data[name];
+                if(s === "On Time") {
+                    personal[name]++;
+                } else if(s === "Remote" || s === "Office Closed") {
+                    // Streak 维持但不加数字，或是根据你们规矩改
                 } else {
-                    personalStreaks[name] = 0;
+                    personal[name] = 0;
                     dayPerfect = false;
                 }
             });
             teamStreak = dayPerfect ? teamStreak + 1 : 0;
         });
-
-        return { team: teamStreak, personal: personalStreaks };
+        return { team: teamStreak, personal: personal };
     }
 
     function saveData() {
-        const selectedDate = document.getElementById('logDate').value;
-        if(!selectedDate) return alert("Please select a date.");
+        const dateVal = document.getElementById('logDate').value;
+        if(!dateVal) return alert("Please select a date!");
 
-        const dailyRecord = { date: selectedDate, data: {} };
-        team.forEach(name => {
-            dailyRecord.data[name] = document.getElementById(`sel-${name}`).value;
-        });
+        const daily = { date: dateVal, data: {} };
+        team.forEach(n => daily.data[n] = document.getElementById(`sel-${n}`).value);
 
-        // 检查是否已有该日期记录
-        const existingIndex = state.history.findIndex(h => h.date === selectedDate);
-        if(existingIndex !== -1) {
-            if(!confirm("Record for this date already exists. Overwrite?")) return;
-            state.history[existingIndex] = dailyRecord;
+        // 检查重复
+        const idx = state.history.findIndex(h => h.date === dateVal);
+        if(idx !== -1) {
+            if(!confirm("Data for " + dateVal + " already exists. Overwrite?")) return;
+            state.history[idx] = daily;
         } else {
-            state.history.push(dailyRecord);
+            state.history.push(daily);
         }
 
-        // 处理 Golden Ticket (每10天 On Time 自动获得)
-        // 注意：这里的 Ticket 逻辑简单处理，如果你需要更复杂的可以手动加减
-        const stats = calculateStreaks();
-        team.forEach(name => {
-            if(stats.personal[name] > 0 && stats.personal[name] % 10 === 0) {
-                // 这里仅作演示提示，Ticket 逻辑可按需深度定制
+        // 处理 Golden Tickets (简易逻辑：每10天给一张)
+        // 实际操作中你可以在 MCIT 进阶课里学如何更精准地通过历史记录发放
+        const finalStats = calculateStreaks();
+        team.forEach(n => {
+            if(finalStats.personal[n] > 0 && finalStats.personal[name] % 10 === 0) {
+                // state.members[n].tickets++; // 自动增加逻辑
             }
         });
 
         localStorage.setItem('bolt_v4_data', JSON.stringify(state));
         initTable();
-        alert("Saved for " + selectedDate);
+        alert("Log saved for " + dateVal + "!");
     }
 
     function renderHistory() {
         const container = document.getElementById('historyContainer');
-        if(state.history.length === 0) {
-            container.innerHTML = "<p>No logs found.</p>";
-            return;
-        }
+        if(state.history.length === 0) return container.innerHTML = "<p>No logs found.</p>";
 
-        // 历史页面按日期倒序排列（最新的在最上面）
         const sorted = [...state.history].sort((a, b) => new Date(b.date) - new Date(a.date));
 
         container.innerHTML = sorted.map(entry => `
-            <div style="border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 8px; background: #fff;">
-                <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between;">
+            <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
+                <div style="font-weight: bold; margin-bottom: 8px; display:flex; justify-content:space-between;">
                     <span>📅 ${entry.date}</span>
-                    <button onclick="deleteRecord('${entry.date}')" style="color:red; background:none; border:none; cursor:pointer; font-size:10px;">Delete</button>
+                    <button onclick="deleteRec('${entry.date}')" style="color:red; background:none; border:none; cursor:pointer; font-size:10px;">[Delete]</button>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
                     ${Object.entries(entry.data).map(([n, s]) => `
-                        <div style="font-size: 12px;">${n}: <span class="status-tag tag-${s.replace(' ', '')}">${s}</span></div>
+                        <div style="font-size: 11px;">${n}: <span class="status-tag tag-${s.replace(' ', '')}">${s}</span></div>
                     `).join('')}
                 </div>
             </div>
         `).join('');
     }
 
-    function deleteRecord(date) {
-        if(!confirm("Delete record for " + date + "?")) return;
-        state.history = state.history.filter(h => h.date !== date);
+    function deleteRec(d) {
+        if(!confirm("Delete record for " + d + "?")) return;
+        state.history = state.history.filter(h => h.date !== d);
         localStorage.setItem('bolt_v4_data', JSON.stringify(state));
         renderHistory();
         initTable();
     }
 
-    function updateRewards(streak) {
+    function updateRewards(s) {
         [5, 10, 15, 30].forEach(d => {
-            document.getElementById(`reward-${d}`).classList.toggle('active', streak >= d);
+            document.getElementById(`reward-${d}`).classList.toggle('active', s >= d);
         });
     }
 
     function resetData() {
-        if(confirm("Wipe everything?")) { localStorage.clear(); location.reload(); }
+        if(confirm("Erase all data?")) { localStorage.clear(); location.reload(); }
     }
 
     initTable();
