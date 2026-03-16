@@ -7,7 +7,7 @@
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .container { max-width: 850px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         
         .header-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px; }
         .btn-token { background: none; border: 1px solid #dadce0; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: #70757a; font-size: 11px; }
@@ -19,21 +19,27 @@
         .section { display: none; }
         .section.active { display: block; }
 
-        /* --- 新日历样式 --- */
+        /* --- 5-Column Calendar (Weekdays Only) --- */
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-nav button { background: #e8f0fe; border: none; color: var(--primary); padding: 5px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .calendar-nav h4 { margin: 0; font-size: 18px; }
-
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #eee; }
+        
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); /* 重点：改为5列 */
+            gap: 8px; 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 12px; 
+            border: 1px solid #eee; 
+        }
         .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #70757a; padding-bottom: 5px; }
-        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; font-size: 14px; position: relative; }
+        .cal-day { aspect-ratio: 1.2; background: white; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; font-size: 14px; position: relative; }
         .cal-day.empty { background: transparent; border: none; }
         .cal-day span { font-size: 8px; margin-top: 2px; font-weight: bold; }
 
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
 
-        /* Redeem Card */
         .redeem-card { background: #fff9c4; border: 1px dashed var(--yellow); padding: 20px; border-radius: 12px; margin: 25px 0; }
         .redeem-item { display: flex; align-items: center; gap: 12px; margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 8px; }
         .redeem-item.locked { opacity: 0.4; filter: grayscale(1); }
@@ -95,7 +101,7 @@
     
     let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
     let csvData = [];
-    let viewDate = new Date(); // 用于日历显示的日期
+    let viewDate = new Date();
 
     document.getElementById('logDate').valueAsDate = new Date();
 
@@ -134,31 +140,45 @@
     }
 
     function renderHistory() {
-        // 1. 计算 Streak (基于全部历史)
         const sorted = csvData.slice(1).sort((a, b) => new Date(a[0]) - new Date(b[0]));
         let streak = 0;
-        sorted.forEach(row => { streak = row.slice(1).includes("Late") ? 0 : streak + 1; });
+        sorted.forEach(row => { 
+            const d = new Date(row[0]);
+            // 只有工作日参与 Streak 计算（虽然 csv 里通常也就只有工作日）
+            if (d.getDay() !== 0 && d.getDay() !== 6) {
+                streak = row.slice(1).includes("Late") ? 0 : streak + 1; 
+            }
+        });
         document.getElementById('streakDisplay').innerText = streak;
 
-        // 2. 渲染日历
         document.getElementById('monthDisplay').innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         const cal = document.getElementById('calendarGrid');
         cal.innerHTML = '';
         
-        // 星期表头
-        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => {
+        // 只有 5 天
+        ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(d => {
             cal.innerHTML += `<div class="weekday-label">${d}</div>`;
         });
 
-        const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-        const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+        const year = viewDate.getFullYear();
+        const month = viewDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        // 填充月初空白
-        for(let i=0; i<firstDay; i++) cal.innerHTML += `<div class="cal-day empty"></div>`;
-
-        // 填充日期
         for(let d=1; d<=daysInMonth; d++) {
-            const curDate = `${viewDate.getFullYear()}-${String(viewDate.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dateObj = new Date(year, month, d);
+            const dayOfWeek = dateObj.getDay();
+
+            // 跳过周末
+            if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+            // 如果是月初，且不是周一，需要填充空白
+            if (d === 1 && dayOfWeek !== 1) {
+                // dayOfWeek: 2(Tue), 3(Wed), 4(Thu), 5(Fri)
+                // 需要填充的格子数 = dayOfWeek - 1
+                for(let i=0; i < dayOfWeek - 1; i++) cal.innerHTML += `<div class="cal-day empty"></div>`;
+            }
+
+            const curDate = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const row = csvData.find(r => r[0] === curDate);
             let cls = '', label = '';
             if(row) {
@@ -169,7 +189,6 @@
             cal.innerHTML += `<div class="cal-day ${cls}"><strong>${d}</strong>${label}</div>`;
         }
 
-        // 3. 奖励列表
         const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
         const redeemed = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
         document.getElementById('redeemList').innerHTML = milestones.map(m => `
@@ -188,6 +207,12 @@
     async function uploadToGitHub() {
         const btn = document.getElementById('saveBtn');
         const dateVal = document.getElementById('logDate').value;
+        const checkD = new Date(dateVal);
+        if (checkD.getDay() === 0 || checkD.getDay() === 6) {
+            alert("It's the weekend! No need to log.");
+            return;
+        }
+
         btn.disabled = true; btn.innerText = "⏳ Saving...";
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
