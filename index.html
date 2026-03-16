@@ -3,87 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Hub - OnePage</title>
+    <title>Bolt Team Hub - Pro</title>
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; line-height: 1.5; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
         .container { max-width: 900px; margin: auto; display: flex; flex-direction: column; gap: 20px; }
-        
-        /* Glassmorphism sections */
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         
-        .header { display: flex; justify-content: space-between; align-items: center; }
-        .btn-token { background: none; border: 1px solid #ddd; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; color: #888; }
-
-        /* Streak & Rewards */
+        /* Streak Hero */
         .streak-hero { text-align: center; background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%); border: 1px solid #d2e3fc; }
-        .streak-number { font-size: 3rem; font-weight: 800; color: var(--primary); display: block; }
-        
-        /* Calendar Section */
+        .streak-number { font-size: 3.5rem; font-weight: 800; color: var(--primary); line-height: 1; margin: 10px 0; }
+
+        /* Calendar */
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .calendar-nav button { background: #eee; border: none; padding: 5px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; }
-        .cal-day { aspect-ratio: 1.2; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; position: relative; }
-        .cal-day:hover { border-color: var(--primary); transform: scale(1.02); }
-        .cal-day.active { border: 3px solid var(--primary); box-shadow: 0 0 10px rgba(26,115,232,0.2); }
-        .cal-day.empty { background: transparent; border: none; cursor: default; }
-        .cal-day span { font-size: 8px; margin-top: 2px; font-weight: bold; }
+        .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; text-transform: uppercase; }
+        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; }
+        .cal-day.active { border: 3px solid var(--primary); transform: scale(1.05); z-index: 2; }
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
+        .cal-day span { font-size: 9px; font-weight: bold; margin-top: 4px; }
 
-        /* Editing Block - 默认隐藏 */
-        #editBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-        .edit-item { display: flex; flex-direction: column; gap: 5px; }
-        .edit-item label { font-size: 12px; font-weight: bold; color: #856404; }
-        select { padding: 8px; border-radius: 6px; border: 1px solid #d9d9d9; background: white; }
+        /* Wallet & Transfer */
+        .wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 15px; }
+        .wallet-item { background: #fffdf0; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; text-align: center; }
+        .wallet-name { font-size: 12px; font-weight: bold; display: block; }
+        .wallet-count { font-size: 18px; color: var(--gold); font-weight: 800; }
 
-        /* Redeem Section */
-        .redeem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .redeem-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee; }
-        .redeem-item.ready { border-color: var(--yellow); background: #fffdf0; }
-        .redeem-item.locked { opacity: 0.4; filter: grayscale(1); }
+        /* Edit/Transfer Blocks */
+        #editBlock, #transferBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; margin-top: 10px; }
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin: 15px 0; }
         
-        .btn-save { margin-top: 20px; width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        select, input { padding: 10px; border-radius: 8px; border: 1px solid #ccc; background: white; font-family: inherit; }
+        .btn-main { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-sub { background: none; border: 1px solid #ddd; padding: 5px 15px; border-radius: 6px; cursor: pointer; color: #666; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h2 style="margin:0; color:var(--primary)">⚡ Bolt Team Hub</h2>
-        <div style="text-align: right">
-            <div id="syncStat" style="font-size: 11px; color: #888;">📡 Initializing...</div>
-            <button class="btn-token" onclick="updateToken()">Settings</button>
-        </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin:0; color:var(--primary)">⚡ Bolt Team Pro</h2>
+        <div id="syncStat" style="font-size: 11px; color: #888;">📡 Initializing Sync...</div>
     </div>
 
     <div class="card streak-hero">
-        <span style="font-size: 14px; color: #70757a; font-weight: bold; text-transform: uppercase;">Current Team Streak</span>
-        <span class="streak-number" id="streakDisplay">0</span>
-        <div class="redeem-grid" id="redeemList"></div>
+        <span style="font-size: 12px; font-weight: bold; color: #70757a;">TEAM WORK STREAK</span>
+        <div class="streak-number" id="streakDisplay">0</div>
+        <div id="milestoneStatus" style="font-size: 14px; color: #1e8e3e; font-weight: bold;"></div>
+    </div>
+
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin:0">🎫 Member Wallet</h3>
+            <button class="btn-sub" onclick="toggleTransfer()">Transfer Ticket</button>
+        </div>
+        <div class="wallet-grid" id="walletGrid"></div>
+        
+        <div id="transferBlock" style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #fbc02d;">
+            <div class="action-grid">
+                <select id="fromMember"><option value="">From...</option></select>
+                <select id="toMember"><option value="">To...</option></select>
+                <button class="btn-main" onclick="executeTransfer()">Confirm Transfer</button>
+            </div>
+        </div>
     </div>
 
     <div class="card">
         <div class="calendar-nav">
-            <button onclick="changeMonth(-1)">◀</button>
+            <button class="btn-sub" onclick="changeMonth(-1)">◀ Prev</button>
             <h3 id="monthDisplay" style="margin:0">Month Year</h3>
-            <button onclick="changeMonth(1)">▶</button>
+            <button class="btn-sub" onclick="changeMonth(1)">Next ▶</button>
         </div>
         <div class="calendar-grid" id="calendarGrid"></div>
-        <p style="font-size: 11px; color: #9aa0a6; text-align: center; margin-top: 15px;">💡 Click any day to view details or edit attendance.</p>
     </div>
 
     <div class="card" id="editBlock">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ffe58f; padding-bottom: 10px;">
-            <h3 style="margin:0; color: #856404;" id="editTitle">Edit Attendance</h3>
-            <button onclick="closeEdit()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#856404;">&times;</button>
-        </div>
-        <div class="edit-grid" id="editGrid"></div>
-        <button class="btn-save" id="saveBtn" onclick="uploadToGitHub()">Save Changes to GitHub</button>
+        <h3 style="margin:0; color: #856404;" id="editTitle">Edit Attendance</h3>
+        <div class="action-grid" id="editGrid"></div>
+        <button class="btn-main" id="saveBtn" onclick="saveAttendance()">Update GitHub CSV</button>
     </div>
 </div>
 
@@ -92,52 +90,76 @@
     const GITHUB_REPO = "Bolt-Clock-In";
     const FILE_PATH = "data.csv";
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
-    const options = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
+    const statusOpts = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
     
     let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
-    let csvData = [];
+    if (!GITHUB_TOKEN) { GITHUB_TOKEN = prompt("Enter Token:"); localStorage.setItem('bolt_gh_token', GITHUB_TOKEN); }
+
+    let csvData = []; 
     let viewDate = new Date();
-    let activeEditingDate = "";
+    let activeDate = "";
 
-    function updateToken() {
-        const t = prompt("Enter GitHub Token:");
-        if(t) { localStorage.setItem('bolt_gh_token', t); location.reload(); }
-    }
-
-    async function loadData() {
-        if(!GITHUB_TOKEN) return document.getElementById('syncStat').innerText = "🔑 Token Missing";
-        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}?t=${Date.now()}`;
+    async function load() {
         try {
+            const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}?t=${Date.now()}`;
             const resp = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
             const json = await resp.json();
             const content = decodeURIComponent(escape(atob(json.content)));
             csvData = content.split('\n').filter(l => l.trim() !== "").map(l => l.split(','));
-            document.getElementById('syncStat').innerText = "✅ Synced with CSV";
-            refreshUI();
+            document.getElementById('syncStat').innerText = "✅ Live Sync Active";
+            refresh();
         } catch(e) { document.getElementById('syncStat').innerText = "❌ Sync Error"; }
     }
 
-    function refreshUI() {
-        // Calculate Streak
-        const sorted = csvData.slice(1).sort((a, b) => new Date(a[0]) - new Date(b[0]));
+    function refresh() {
+        // 1. Calculate Wallet & Tickets
+        const wallet = team.reduce((acc, n) => { acc[n] = 0; return acc; }, {});
+        const attendanceData = [];
+
+        csvData.forEach(row => {
+            if (row[0] === "TRANSFER") {
+                wallet[row[1]]--; // From
+                wallet[row[2]]++; // To
+            } else if (row[0] !== "Date") {
+                attendanceData.push(row);
+                // 逻辑：每满10次 On Time 给一张票 (在此示例中简单计算历史累计)
+                team.forEach((n, i) => {
+                    if (row[i+1] === "Golden Ticket") wallet[n]--; 
+                    // 这里可以根据业务逻辑增加自动发票功能
+                });
+            }
+        });
+
+        const wGrid = document.getElementById('walletGrid');
+        wGrid.innerHTML = team.map(n => `
+            <div class="wallet-item">
+                <span class="wallet-name">${n}</span>
+                <span class="wallet-count">${wallet[n] < 0 ? 0 : wallet[n]}</span>
+            </div>
+        `).join('');
+
+        // 2. Calculate Streak (Fixed Logic)
+        const sorted = attendanceData.sort((a, b) => new Date(a[0]) - new Date(b[0]));
         let streak = 0;
-        sorted.forEach(row => { 
+        sorted.forEach(row => {
             const d = new Date(row[0]);
             if (d.getDay() !== 0 && d.getDay() !== 6) {
-                streak = row.slice(1).includes("Late") ? 0 : streak + 1; 
+                // 只要这一行没人迟到，或者迟到的人用了票 (这里假设选了 Ticket 就代表 Late 被抵消)
+                const hasLate = row.slice(1).some(s => s === "Late");
+                streak = hasLate ? 0 : streak + 1;
             }
         });
         document.getElementById('streakDisplay').innerText = streak;
 
-        // Render Rewards
-        const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
-        const redeemed = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
-        document.getElementById('redeemList').innerHTML = milestones.map(m => `
-            <div class="redeem-item ${streak >= m.d ? 'ready' : 'locked'}">
-                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${streak >= m.d ? '' : 'disabled'} onchange="toggleRedeem('s${m.d}')">
-                <span style="font-size:12px;"><b>${m.d}D:</b> ${m.t}</span>
-            </div>
-        `).join('');
+        // 3. Populate Transfer Dropdowns
+        const from = document.getElementById('fromMember');
+        const to = document.getElementById('toMember');
+        if(from.options.length <= 1) {
+            team.forEach(n => {
+                from.add(new Option(n, n));
+                to.add(new Option(n, n));
+            });
+        }
 
         renderCalendar();
     }
@@ -146,100 +168,93 @@
         document.getElementById('monthDisplay').innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         const cal = document.getElementById('calendarGrid');
         cal.innerHTML = '';
-        
         ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(d => cal.innerHTML += `<div class="weekday-label">${d}</div>`);
 
-        const year = viewDate.getFullYear();
-        const month = viewDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const y = viewDate.getFullYear(), m = viewDate.getMonth();
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
 
         for(let d=1; d<=daysInMonth; d++) {
-            const dateObj = new Date(year, month, d);
-            const dayOfWeek = dateObj.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-            if (d === 1 && dayOfWeek !== 1) {
-                for(let i=0; i < dayOfWeek - 1; i++) cal.innerHTML += `<div class="cal-day empty"></div>`;
+            const dObj = new Date(y, m, d);
+            if (dObj.getDay() === 0 || dObj.getDay() === 6) continue;
+            if (d === 1 && dObj.getDay() !== 1) {
+                for(let i=0; i < dObj.getDay() - 1; i++) cal.innerHTML += `<div class="cal-day empty"></div>`;
             }
 
-            const curDate = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const row = csvData.find(r => r[0] === curDate);
-            let cls = '', label = '';
+            const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const row = csvData.find(r => r[0] === ds);
+            let cls = '', lbl = '';
             if(row) {
-                const fail = row.slice(1).includes("Late");
-                const ticket = row.slice(1).includes("Golden Ticket");
-                cls = fail ? 'day-fail' : 'day-success';
-                label = fail ? '<span>LATE</span>' : (ticket ? '<span style="color:var(--gold)">TICKET</span>' : '<span>OK</span>');
+                const late = row.slice(1).includes("Late");
+                const tkt = row.slice(1).includes("Golden Ticket");
+                cls = late ? 'day-fail' : 'day-success';
+                lbl = late ? '<span>LATE</span>' : (tkt ? '<span style="color:var(--gold)">TICKET</span>' : '<span>OK</span>');
             }
-            const activeCls = (activeEditingDate === curDate) ? 'active' : '';
-            cal.innerHTML += `<div class="cal-day ${cls} ${activeCls}" onclick="openEdit('${curDate}')"><strong>${d}</strong>${label}</div>`;
+            cal.innerHTML += `<div class="cal-day ${cls} ${activeDate === ds ? 'active' : ''}" onclick="openEdit('${ds}')"><strong>${d}</strong>${lbl}</div>`;
         }
     }
 
-    function openEdit(dateStr) {
-        activeEditingDate = dateStr;
-        renderCalendar(); // Refresh to show active border
-        
-        const row = csvData.find(r => r[0] === dateStr);
-        document.getElementById('editTitle').innerText = "Attendance for " + dateStr;
+    function openEdit(ds) {
+        activeDate = ds; renderCalendar();
+        const row = csvData.find(r => r[0] === ds);
+        document.getElementById('editBlock').style.display = "block";
+        document.getElementById('editTitle').innerText = "Attendance: " + ds;
         const grid = document.getElementById('editGrid');
-        
-        grid.innerHTML = team.map((name, i) => `
-            <div class="edit-item">
-                <label>${name}</label>
-                <select id="edit-sel-${name}">
-                    ${options.map(o => `<option value="${o}" ${(row && row[i+1] === o) ? 'selected' : ''}>${o}</option>`).join('')}
-                </select>
+        grid.innerHTML = team.map((n, i) => `
+            <div style="display:flex; flex-direction:column">
+                <label style="font-size:11px; font-weight:bold">${n}</label>
+                <select id="edit-${n}">${statusOpts.map(o => `<option value="${o}" ${(row && row[i+1] === o) ? 'selected' : ''}>${o}</option>`).join('')}</select>
             </div>
         `).join('');
-        
-        document.getElementById('editBlock').style.display = "block";
-        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
-    function closeEdit() {
-        document.getElementById('editBlock').style.display = "none";
-        activeEditingDate = "";
-        renderCalendar();
+    async function saveAttendance() {
+        updateCSV([activeDate, ...team.map(n => document.getElementById(`edit-${n}`).value)].join(","), activeDate);
     }
 
-    function toggleRedeem(k) {
-        let r = JSON.parse(localStorage.getItem('bolt_redeemed') || "{}");
-        r[k] = !r[k]; localStorage.setItem('bolt_redeemed', JSON.stringify(r));
+    async function executeTransfer() {
+        const from = document.getElementById('fromMember').value;
+        const to = document.getElementById('toMember').value;
+        if(!from || !to || from === to) return alert("Select different members");
+        const newRow = `TRANSFER,${from},${to},${new Date().toISOString().split('T')[0]}`;
+        updateCSV(newRow, null);
     }
 
-    function changeMonth(step) {
-        viewDate.setMonth(viewDate.getMonth() + step);
-        refreshUI();
-    }
-
-    async function uploadToGitHub() {
+    async function updateCSV(newContent, dateMatch) {
         const btn = document.getElementById('saveBtn');
-        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        btn.disabled = true; btn.innerText = "Syncing...";
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
             const get = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
             const json = await get.json();
-            const old = decodeURIComponent(escape(atob(json.content)));
+            const oldLines = decodeURIComponent(escape(atob(json.content))).split('\n').filter(l => l.trim() !== "");
             
-            const newRow = [activeEditingDate, ...team.map(n => document.getElementById(`edit-sel-${n}`).value)].join(",");
-            let lines = old.split('\n').filter(l => l.trim() !== "");
-            const idx = lines.findIndex(l => l.startsWith(activeEditingDate));
-            if(idx !== -1) lines[idx] = newRow; else lines.push(newRow);
+            if(dateMatch) {
+                const idx = oldLines.findIndex(l => l.startsWith(dateMatch));
+                if(idx !== -1) oldLines[idx] = newContent; else oldLines.push(newContent);
+            } else {
+                oldLines.push(newContent); // For Transfers
+            }
 
             await fetch(url, {
                 method: "PUT",
                 headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Update ${activeEditingDate}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha })
+                body: JSON.stringify({ message: "Update Bolt Data", content: btoa(unescape(encodeURIComponent(oldLines.join('\n')))), sha: json.sha })
             });
-            
-            alert("Success! Data synced.");
-            await loadData();
-            closeEdit();
-        } catch(e) { alert("Error saving to GitHub."); }
-        btn.disabled = false; btn.innerText = "Save Changes to GitHub";
+            alert("Success!"); await load();
+            document.getElementById('editBlock').style.display = "none";
+            document.getElementById('transferBlock').style.display = "none";
+        } catch(e) { alert("Fail"); }
+        btn.disabled = false; btn.innerText = "Update GitHub CSV";
     }
 
-    loadData();
+    function toggleTransfer() {
+        const b = document.getElementById('transferBlock');
+        b.style.display = b.style.display === "none" ? "block" : "none";
+    }
+
+    function changeMonth(s) { viewDate.setMonth(viewDate.getMonth() + s); renderCalendar(); }
+
+    load();
 </script>
 </body>
 </html>
