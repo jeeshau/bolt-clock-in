@@ -5,79 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bolt Team Hub</title>
     <style>
-        :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         
-        /* Tabs */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
-        .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #70757a; border-bottom: 3px solid transparent; }
-        .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #e8f0fe; }
+        /* Sync Status & Header */
+        .header-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 13px; }
+        #syncStat { font-weight: 500; display: flex; align-items: center; gap: 5px; }
+        .btn-token { background: none; border: 1px solid #dadce0; padding: 4px 10px; border-radius: 6px; cursor: pointer; color: #70757a; font-size: 11px; }
+        .btn-token:hover { background: #f1f3f4; }
+
+        /* Tabs Navigation */
+        .tabs { display: flex; gap: 5px; margin-bottom: 25px; background: #f1f3f4; padding: 5px; border-radius: 10px; }
+        .tab { flex: 1; padding: 12px; cursor: pointer; border: none; background: none; font-weight: bold; color: #5f6368; border-radius: 8px; transition: 0.2s; }
+        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+
         .section { display: none; }
         .section.active { display: block; }
 
-        /* Calendar Heatmap */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 15px 0; background: #f1f3f4; padding: 10px; border-radius: 8px; }
-        .cal-day { aspect-ratio: 1; background: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; border: 1px solid #eee; }
-        .day-success { background: #c6f6d5; color: #22543d; border-color: #9ae6b4; }
-        .day-fail { background: #fed7d7; color: #822727; border-color: #feb2b2; }
+        /* Calendar Styling */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .calendar-header h4 { margin: 0; font-size: 18px; color: #202124; }
+        .month-label { font-weight: bold; color: var(--primary); background: #e8f0fe; padding: 4px 12px; border-radius: 20px; font-size: 14px; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 30px; padding: 15px; background: #f8f9fa; border-radius: 12px; border: 1px solid #eee; }
+        .cal-day { aspect-ratio: 1.1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #e0e0e0; transition: all 0.2s; }
+        .cal-day strong { font-size: 16px; }
+        .cal-day span { font-size: 9px; margin-top: 2px; text-transform: uppercase; font-weight: bold; }
+        .cal-day:hover { transform: translateY(-3px); box-shadow: 0 5px 12px rgba(0,0,0,0.08); }
 
-        /* Redeem Section */
-        .redeem-card { background: #fff9c4; border: 1px solid #fbc02d; padding: 20px; border-radius: 10px; margin: 20px 0; }
-        .redeem-item { display: flex; align-items: center; gap: 12px; margin: 10px 0; font-size: 1.1em; }
-        .redeem-item input { transform: scale(1.4); cursor: pointer; }
-        .locked { opacity: 0.4; filter: grayscale(1); }
+        /* Calendar States */
+        .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
+        .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
 
-        /* Table & Forms */
-        .date-input-area { background: #e8f0fe; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
-        .btn-save { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; margin-top: 10px; }
-        .sync-info { font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 10px; }
+        /* Redeem Card */
+        .redeem-card { background: #fff9c4; border: 1px dashed var(--yellow); padding: 20px; border-radius: 12px; margin: 25px 0; }
+        .redeem-item { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 8px; }
+        .redeem-item.locked { opacity: 0.4; filter: grayscale(1); background: none; border: 1px solid rgba(0,0,0,0.05); }
+        .redeem-item input { transform: scale(1.5); cursor: pointer; }
+
+        /* Table & Inputs */
+        .date-picker-area { background: #e8f0fe; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
+        .date-picker-area input { padding: 10px; border-radius: 8px; border: 1px solid #1a73e8; font-size: 16px; font-weight: bold; color: #1a73e8; cursor: pointer; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; color: #70757a; font-size: 13px; text-transform: uppercase; border-bottom: 2px solid #f1f3f4; }
+        td { padding: 15px 12px; border-bottom: 1px solid #f1f3f4; }
+        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; background: #fff; font-size: 14px; outline: none; }
+        select:focus { border-color: var(--primary); }
+
+        .btn-save { width: 100%; padding: 20px; background: var(--primary); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 20px; transition: 0.2s; }
+        .btn-save:hover { background: #1765d1; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3); }
+        .btn-save:disabled { background: #ccc; cursor: not-allowed; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="sync-info">
-        <span id="syncStat">🔄 Checking connection...</span>
-        <button onclick="updateToken()" style="font-size: 10px; cursor: pointer;">Update Token</button>
+    <div class="header-meta">
+        <span id="syncStat">📡 Checking GitHub Sync...</span>
+        <button class="btn-token" onclick="updateToken()">Settings: Update Token</button>
     </div>
 
     <div class="tabs">
-        <button class="tab active" onclick="switchTab('checkin')">Daily Log</button>
-        <button class="tab" onclick="switchTab('history')">History Archive</button>
+        <button class="tab active" id="btn-checkin" onclick="switchTab('checkin')">Daily Log</button>
+        <button class="tab" id="btn-history" onclick="switchTab('history')">History Archive</button>
     </div>
 
     <div id="checkin" class="section active">
-        <div class="date-input-area">
-            <label><strong>Recording For: </strong></label>
+        <div class="date-picker-area">
+            <label style="display: block; margin-bottom: 8px; font-size: 14px; font-weight: bold;">Logging Attendance For:</label>
             <input type="date" id="logDate">
         </div>
         <table>
-            <thead><tr><th>Member</th><th>Status</th></tr></thead>
+            <thead><tr><th>Team Member</th><th>Today's Status</th></tr></thead>
             <tbody id="teamBody"></tbody>
         </table>
         <button class="btn-save" id="saveBtn" onclick="uploadToGitHub()">Push Updates to GitHub (CSV)</button>
     </div>
 
     <div id="history" class="section">
-        <h3>Team Attendance Calendar</h3>
+        <div class="calendar-header">
+            <h4>Team Performance</h4>
+            <span class="month-label" id="currentMonthYear"></span>
+        </div>
         <div class="calendar-grid" id="calendarGrid"></div>
 
         <div class="redeem-card">
-            <h3 style="margin-top: 0;">🎁 Milestones & Rewards</h3>
-            <p>Team Streak: <strong><span id="streakDisplay">0</span> Days</strong></p>
+            <h3 style="margin-top: 0; font-size: 20px;">🎁 Milestone Rewards</h3>
+            <p style="font-size: 18px;">Current Streak: <strong id="streakDisplay" style="color:var(--success)">0</strong> Days</p>
             <div id="redeemList"></div>
+            <p style="font-size: 11px; color: #856404; margin-top: 15px;">*Streak resets only if someone is marked 'Late'.</p>
         </div>
-
-        <h4>Raw History Logs</h4>
-        <div id="rawLogs" style="font-size: 12px; color: #666;"></div>
     </div>
 </div>
 
 <script>
+    // --- 配置 ---
     const GITHUB_USER = "Jeeshau";
     const GITHUB_REPO = "Bolt-Clock-In";
     const FILE_PATH = "data.csv";
@@ -85,7 +109,7 @@
     const options = ["On Time", "Late", "Remote", "OOO", "Sick", "PASS"];
     
     let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
-    let csvData = []; // 存储解析后的 CSV 数据
+    let csvData = [];
 
     document.getElementById('logDate').valueAsDate = new Date();
 
@@ -93,45 +117,54 @@
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(id).classList.add('active');
-        event.currentTarget.classList.add('active');
+        document.getElementById('btn-' + id).classList.add('active');
         if(id === 'history') renderHistory();
     }
 
     function updateToken() {
-        const t = prompt("Enter your GitHub Token:");
+        const t = prompt("Please enter your GitHub Token (ghp_...):");
         if(t) { localStorage.setItem('bolt_gh_token', t); location.reload(); }
     }
 
     function initUI() {
         const body = document.getElementById('teamBody');
         body.innerHTML = team.map(n => `
-            <tr><td><strong>${n}</strong></td>
-            <td><select id="sel-${n}">${options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></td></tr>
+            <tr>
+                <td><strong>${n}</strong></td>
+                <td><select id="sel-${n}">${options.map(o => `<option value="${o}">${o}</option>`).join('')}</select></td>
+            </tr>
         `).join('');
     }
 
     async function loadData() {
-        if(!GITHUB_TOKEN) return document.getElementById('syncStat').innerText = "🔑 Token Missing";
+        if(!GITHUB_TOKEN) {
+            document.getElementById('syncStat').innerHTML = "🔑 <span style='color:orange'>Token Required</span>";
+            return;
+        }
         const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
         try {
-            const resp = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
+            const resp = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Cache-Control': 'no-cache' } });
+            if(!resp.ok) throw new Error();
             const json = await resp.json();
             const content = decodeURIComponent(escape(atob(json.content)));
             csvData = content.split('\n').filter(l => l.trim() !== "").map(l => l.split(','));
             
-            document.getElementById('syncStat').innerText = "✅ GitHub Synced";
+            document.getElementById('syncStat').innerHTML = "✅ <span style='color:green'>GitHub Synced</span>";
             
-            // 自动填充选中日期的数据
             const dateVal = document.getElementById('logDate').value;
             const record = csvData.find(row => row[0] === dateVal);
             if(record) {
                 team.forEach((name, i) => { if(record[i+1]) document.getElementById(`sel-${name}`).value = record[i+1]; });
+            } else {
+                team.forEach(name => { document.getElementById(`sel-${name}`).value = "On Time"; });
             }
-        } catch(e) { document.getElementById('syncStat').innerText = "❌ Load Failed"; }
+        } catch(e) { 
+            document.getElementById('syncStat').innerHTML = "❌ <span style='color:red'>Sync Failed (Check Token)</span>";
+        }
     }
 
     function calculateStreak() {
-        // 按日期排序（从旧到新）
+        if(csvData.length < 2) return 0;
         const sorted = csvData.slice(1).sort((a, b) => new Date(a[0]) - new Date(b[0]));
         let streak = 0;
         sorted.forEach(row => {
@@ -144,20 +177,27 @@
     function renderHistory() {
         const streak = calculateStreak();
         document.getElementById('streakDisplay').innerText = streak;
+        
+        const now = new Date();
+        document.getElementById('currentMonthYear').innerText = now.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-        // 1. 日历 (显示最近 28 天)
         const cal = document.getElementById('calendarGrid');
         cal.innerHTML = '';
         for(let i=27; i>=0; i--) {
             const d = new Date(); d.setDate(d.getDate() - i);
             const ds = d.toISOString().split('T')[0];
             const row = csvData.find(r => r[0] === ds);
+            
             let cls = '';
-            if(row) cls = row.slice(1).some(s => s === "Late") ? 'day-fail' : 'day-success';
-            cal.innerHTML += `<div class="cal-day ${cls}">${d.getDate()}</div>`;
+            let label = 'No Data';
+            if(row) {
+                const isFail = row.slice(1).some(s => s === "Late");
+                cls = isFail ? 'day-fail' : 'day-success';
+                label = isFail ? 'LATE' : 'PERFECT';
+            }
+            cal.innerHTML += `<div class="cal-day ${cls}"><strong>${d.getDate()}</strong><span>${label}</span></div>`;
         }
 
-        // 2. 奖励列表
         const milestones = [
             {d: 5, t: "Free Breakfast 🥐"}, {d: 10, t: "Free Lunch 🍱"},
             {d: 15, t: "Remote Day 🏠"}, {d: 30, t: "Day Off ✈️"}
@@ -169,7 +209,7 @@
                 <input type="checkbox" ${redeemedMap['s'+m.d] ? 'checked' : ''} 
                        ${streak >= m.d ? '' : 'disabled'}
                        onchange="toggleRedeem('s${m.d}')">
-                <span><strong>${m.d} Days:</strong> ${m.t}</span>
+                <span><strong>${m.d} Day Streak:</strong> ${m.t}</span>
             </div>
         `).join('');
     }
@@ -184,31 +224,36 @@
         if(!GITHUB_TOKEN) return updateToken();
         const btn = document.getElementById('saveBtn');
         const dateVal = document.getElementById('logDate').value;
-        btn.disabled = true; btn.innerText = "⏳ Saving...";
+        btn.disabled = true; btn.innerText = "⏳ Saving to GitHub...";
 
         try {
             const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-            const getResp = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
+            const getResp = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Cache-Control': 'no-cache' } });
             const getJson = await getResp.json();
             const oldContent = decodeURIComponent(escape(atob(getJson.content)));
             
             const newRow = [dateVal, ...team.map(n => document.getElementById(`sel-${n}`).value)].join(",");
             let lines = oldContent.split('\n').filter(l => l.trim() !== "");
             const idx = lines.findIndex(l => l.startsWith(dateVal));
-            if(idx !== -1) lines[idx] = newRow; else lines.push(newRow);
+            
+            if(idx !== -1) lines[idx] = newRow; 
+            else lines.push(newRow);
 
             const putResp = await fetch(url, {
                 method: "PUT",
                 headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: `Log ${dateVal}`,
+                    message: `Log Attendance: ${dateVal}`,
                     content: btoa(unescape(encodeURIComponent(lines.join('\n')))),
                     sha: getJson.sha
                 })
             });
 
-            if(putResp.ok) { alert("Success!"); loadData(); }
-        } catch(e) { alert("Save failed."); }
+            if(putResp.ok) { 
+                alert("🎉 Successfully synced with data.csv!"); 
+                await loadData(); 
+            } else { throw new Error(); }
+        } catch(e) { alert("Error saving. Please check your Token permissions."); }
         btn.disabled = false; btn.innerText = "Push Updates to GitHub (CSV)";
     }
 
