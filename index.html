@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Hub - Final Fix</title>
+    <title>Bolt Team Hub - Progress Tracker</title>
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
@@ -11,6 +11,12 @@
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
         .streak-hero { text-align: center; background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%); border: 1px solid #d2e3fc; }
         .streak-number { font-size: 3.5rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
+        
+        /* 新增：里程碑进度条样式 */
+        .milestone-bar { display: flex; justify-content: space-around; background: #f1f3f4; padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 12px; font-weight: bold; }
+        .milestone-item { color: #5f6368; }
+        .milestone-item.achieved { color: var(--success); }
+
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
         .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; }
@@ -53,7 +59,6 @@
             <button class="btn-sub" onclick="toggleBlock('transferBlock')">Transfer Ticket</button>
         </div>
         <div class="wallet-grid" id="walletGrid"></div>
-
         <div id="transferBlock" class="card" style="box-shadow:none; margin-top:15px; border-style:dashed;">
             <div class="action-grid" style="margin:0">
                 <select id="tfFrom"><option value="">From...</option></select>
@@ -69,12 +74,15 @@
             <h3 id="monthDisplay" style="margin:0">Month Year</h3>
             <button onclick="changeMonth(1)">Next ▶</button>
         </div>
+        
+        <div class="milestone-bar" id="milestoneBar"></div>
+
         <div class="calendar-grid" id="calendarGrid"></div>
     </div>
 
     <div class="card" id="editBlock">
         <h3 style="margin:0; color: #856404;" id="editTitle">Edit Attendance</h3>
-        <div class="edit-grid" id="editGrid"></div>
+        <div class="action-grid" id="editGrid"></div>
         <button class="btn-main" id="saveBtn" onclick="saveAttendance()">Update GitHub CSV</button>
     </div>
 </div>
@@ -85,17 +93,20 @@
     const FILE_PATH = "data.csv";
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
     const statusOpts = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
-    const milestones = [{d: 5, t: "Breakfast 🥐"}, {d: 10, t: "Lunch 🍱"}, {d: 15, t: "Remote 🏠"}, {d: 30, t: "Day Off ✈️"}];
+    const milestones = [
+        {d: 5, t: "Breakfast", icon: "🥐"}, 
+        {d: 10, t: "Lunch", icon: "🍱"}, 
+        {d: 15, t: "Remote", icon: "🏠"}, 
+        {d: 30, t: "Day Off", icon: "✈️"}
+    ];
 
-    let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token') || prompt("Enter Token:");
-    localStorage.setItem('bolt_gh_token', GITHUB_TOKEN);
-
+    let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token');
     let csvData = [];
     let viewDate = new Date();
     let activeDate = "";
     let walletState = {};
+    let currentStreak = 0;
 
-    // 解决时差问题的日期解析函数
     function parseLocalDate(dateStr) {
         const parts = dateStr.split('-');
         return new Date(parts[0], parts[1] - 1, parts[2]);
@@ -124,47 +135,38 @@
             else if (row[0] !== "Date" && row[0].includes('-')) attendanceRows.push(row);
         });
 
-        // --- STREAK 核心算法修复 ---
-        // 1. 严格排序
-        const sorted = attendanceRows.sort((a, b) => {
-            return parseLocalDate(a[0]) - parseLocalDate(b[0]);
-        });
+        const sorted = attendanceRows.sort((a, b) => parseLocalDate(a[0]) - parseLocalDate(b[0]));
         
-        let streak = 0;
+        currentStreak = 0;
         sorted.forEach(row => {
             const d = parseLocalDate(row[0]);
-            // 忽略周末的 Streak 计算逻辑
             if (d.getDay() !== 0 && d.getDay() !== 6) {
                 const hasLate = row.slice(1).includes("Late");
-                if (hasLate) {
-                    streak = 0;
-                } else {
-                    streak++;
-                }
+                currentStreak = hasLate ? 0 : currentStreak + 1;
             }
-            
-            // 个人 Ticket 累计逻辑 (OnTime/Remote 满 10 次给一票)
             team.forEach((name, i) => {
                 const s = row[i+1];
                 if (s === "On Time" || s === "Remote") {
                     wallet[name].progress++;
-                    if (wallet[name].progress >= 10) {
-                        wallet[name].balance++;
-                        wallet[name].progress = 0;
-                    }
-                } else if (s === "Golden Ticket") {
-                    wallet[name].balance--;
-                }
+                    if (wallet[name].progress >= 10) { wallet[name].balance++; wallet[name].progress = 0; }
+                } else if (s === "Golden Ticket") { wallet[name].balance--; }
             });
         });
 
         walletState = wallet;
-        document.getElementById('streakDisplay').innerText = streak;
+        document.getElementById('streakDisplay').innerText = currentStreak;
         
+        // 渲染里程碑进度栏
+        document.getElementById('milestoneBar').innerHTML = milestones.map(m => {
+            const isDone = currentStreak >= m.d;
+            const displayVal = isDone ? m.d : currentStreak;
+            return `<div class="milestone-item ${isDone ? 'achieved' : ''}">${m.icon} ${m.t} ${displayVal}/${m.d}</div>`;
+        }).join('');
+
         document.getElementById('redeemList').innerHTML = milestones.map(m => `
-            <div class="redeem-item ${streak >= m.d ? 'ready' : 'locked'}">
-                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${streak >= m.d ? '' : 'disabled'} onchange="syncCSV('REDEEM','${m.d}')">
-                <span style="font-size:12px"><b>${m.d}D:</b> ${m.t}</span>
+            <div class="redeem-item ${currentStreak >= m.d ? 'ready' : 'locked'}">
+                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${currentStreak >= m.d ? '' : 'disabled'} onchange="syncCSV('REDEEM','${m.d}')">
+                <span style="font-size:12px"><b>${m.d}D:</b> ${m.t} ${m.icon}</span>
             </div>
         `).join('');
 
@@ -177,9 +179,7 @@
         `).join('');
 
         const from = document.getElementById('tfFrom'); const to = document.getElementById('tfTo');
-        if(from.options.length <= 1) {
-            team.forEach(n => { from.add(new Option(n, n)); to.add(new Option(n, n)); });
-        }
+        if(from.options.length <= 1) { team.forEach(n => { from.add(new Option(n, n)); to.add(new Option(n, n)); }); }
         renderCalendar();
     }
 
