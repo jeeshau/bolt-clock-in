@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bolt Team Hub - Final Fix</title>
+    <title>Bolt Team Hub - Milestones</title>
     <style>
         :root { --primary: #1a73e8; --success: #188038; --bg: #f8f9fa; --danger: #d93025; --yellow: #fbc02d; --gold: #af9500; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
@@ -13,24 +13,37 @@
         .streak-number { font-size: 3.5rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
         .milestone-bar { display: flex; justify-content: space-around; background: #f1f3f4; padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 11px; font-weight: bold; }
         .milestone-item.achieved { color: var(--success); }
+        
         .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .calendar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-        .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; }
+        .weekday-label { text-align: center; font-size: 11px; font-weight: bold; color: #9aa0a6; text-transform: uppercase; }
+        
+        /* 日历 Block 样式增强 */
         .cal-day { aspect-ratio: 1; background: white; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 8px 4px; border: 1px solid #e0e0e0; cursor: pointer; transition: 0.2s; position: relative; }
         .cal-day.active { outline: 3px solid var(--primary); z-index: 5; }
         .day-success { background: #e6f4ea; color: #1e8e3e; border-color: #34a853; }
         .day-fail { background: #fce8e6; color: #d93025; border-color: #ea4335; }
-        .day-info { font-size: 9px; font-weight: 800; line-height: 1.1; text-align: center; }
-        .day-badge { font-size: 10px; margin-top: 2px; }
+        .day-info { font-size: 9px; font-weight: 800; line-height: 1.2; text-align: center; width: 100%; }
+        .day-badge { font-size: 10px; margin-top: 2px; color: #5f6368; }
+        
+        /* 奖励兑换区域 */
+        .redeem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+        .redeem-item { display: flex; align-items: flex-start; gap: 12px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #eee; text-align: left; }
+        .redeem-item.ready { border-color: var(--yellow); background: #fffef0; }
+        .redeem-item.locked { opacity: 0.5; filter: grayscale(1); }
+        .redeem-item input[type="checkbox"] { transform: scale(1.4); margin-top: 4px; cursor: pointer; }
+        .redeem-select { width: 100%; margin-top: 8px; padding: 4px; font-size: 11px; border-radius: 4px; border: 1px solid #ccc; background: white; cursor: pointer; }
+
         .wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
         .wallet-item { background: #fffdf0; border: 1px solid #fbc02d; padding: 10px; border-radius: 8px; text-align: center; }
         .progress-container { width: 100%; background: #eee; height: 4px; border-radius: 2px; margin-top: 5px; overflow: hidden; }
         .progress-bar { height: 100%; background: var(--gold); }
+        
         #editBlock, #transferBlock { display: none; background: #fffbe6; border: 2px solid #ffe58f; margin-top: 10px; }
         .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-top: 15px; }
         select, input { padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; font-family: inherit; }
         .btn-main { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-sub { background: none; border: 1px solid #ddd; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; color: #666; }
+        .btn-sub { background: none; border: 1px solid #ddd; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; color: #666; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -44,7 +57,7 @@
     <div class="card streak-hero">
         <span style="font-size: 12px; font-weight: bold; color: #70757a;">TOTAL TEAM STREAK</span>
         <div class="streak-number" id="streakDisplay">0</div>
-        <div class="redeem-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;" id="redeemList"></div>
+        <div class="redeem-grid" id="redeemList"></div>
     </div>
 
     <div class="card">
@@ -64,9 +77,9 @@
 
     <div class="card">
         <div class="calendar-nav">
-            <button onclick="changeMonth(-1)">◀</button>
+            <button onclick="changeMonth(-1)" class="btn-sub">◀ Prev</button>
             <h3 id="monthDisplay" style="margin:0">Month Year</h3>
-            <button onclick="changeMonth(1)">Next ▶</button>
+            <button onclick="changeMonth(1)" class="btn-sub">Next ▶</button>
         </div>
         <div class="milestone-bar" id="milestoneBar"></div>
         <div class="calendar-grid" id="calendarGrid"></div>
@@ -85,7 +98,12 @@
     const FILE_PATH = "data.csv";
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
     const statusOpts = ["On Time", "Late", "Golden Ticket", "Remote", "OOO", "Sick", "PASS"];
-    const milestones = [{d: 5, t: "Breakfast", icon: "🥐"}, {d: 10, t: "Lunch", icon: "🍱"}, {d: 15, t: "Remote", icon: "🏠"}, {d: 30, t: "Day Off", icon: "✈️"}];
+    const milestones = [
+        {d: 5, t: "Breakfast", icon: "🥐"}, 
+        {d: 10, t: "Lunch", icon: "🍱"}, 
+        {d: 15, t: "Remote Day", icon: "🏠"}, 
+        {d: 30, t: "Day Off", icon: "✈️"}
+    ];
 
     let GITHUB_TOKEN = localStorage.getItem('bolt_gh_token') || prompt("Enter GitHub Token:");
     localStorage.setItem('bolt_gh_token', GITHUB_TOKEN);
@@ -93,8 +111,12 @@
     let csvData = [];
     let viewDate = new Date();
     let activeDate = "";
-    let streakMap = {};
+    
+    // 全局状态记录
+    let streakMap = {}; 
     let walletState = {};
+    let redeemedRecords = {}; // 记录格式: "5-2026-03-16": true
+    let earnedMilestones = { 5: [], 10: [], 15: [], 30: [] }; // 记录获得奖励的日期数组
 
     function parseLocalDate(dateStr) {
         const parts = dateStr.split('-');
@@ -115,32 +137,55 @@
 
     function refresh() {
         const wallet = team.reduce((acc, n) => { acc[n] = { balance: 0, progress: 0 }; return acc; }, {});
-        const redeemed = {};
         const attendanceRows = [];
+        
+        redeemedRecords = {};
+        earnedMilestones = { 5: [], 10: [], 15: [], 30: [] };
         streakMap = {}; 
 
+        // 1. 数据清洗与归类
         csvData.forEach(originalRow => {
             const row = originalRow.map(item => item.trim());
-            if (row[0] === "REDEEM") redeemed[row[1]] = true;
+            if (row[0] === "REDEEM") {
+                // REDEEM 记录格式: REDEEM,5,2026-03-16,RedeemTime
+                redeemedRecords[`${row[1]}-${row[2]}`] = true;
+            } 
             else if (row[0] === "TRANSFER") {
-                if(wallet[row[1]]) wallet[row[1]].balance--;
-                if(wallet[row[2]]) wallet[row[2]].balance++;
-            } else if (row[0] && row[0].includes('-')) {
+                const from = team.find(n => n.toLowerCase() === row[1].toLowerCase());
+                const to = team.find(n => n.toLowerCase() === row[2].toLowerCase());
+                if (from) wallet[from].balance--;
+                if (to) wallet[to].balance++;
+            } 
+            else if (row[0] && row[0].includes('-')) {
                 attendanceRows.push(row);
             }
         });
 
+        // 2. 核心：计算 Streak 并捕获奖励获取日期
         const sorted = attendanceRows.sort((a, b) => parseLocalDate(a[0]) - parseLocalDate(b[0]));
-        
         let tempStreak = 0;
+
         sorted.forEach(row => {
             const ds = row[0];
             const d = parseLocalDate(ds);
+            
+            // 工作日参与 Streak 计算
             if (d.getDay() !== 0 && d.getDay() !== 6) {
                 const hasLate = row.slice(1).includes("Late");
-                if (hasLate) tempStreak = 0;
-                else { tempStreak++; streakMap[ds] = tempStreak; }
+                if (hasLate) {
+                    tempStreak = 0;
+                } else {
+                    tempStreak++;
+                    streakMap[ds] = tempStreak; // 记录当天的连胜数
+                    
+                    // 检查是否在这一天达成了奖励
+                    if ([5, 10, 15, 30].includes(tempStreak)) {
+                        earnedMilestones[tempStreak].push(ds);
+                    }
+                }
             }
+            
+            // 个人 Ticket 累计
             team.forEach((name, i) => {
                 const s = row[i+1];
                 if (s === "On Time" || s === "Remote") {
@@ -153,17 +198,48 @@
         walletState = wallet;
         document.getElementById('streakDisplay').innerText = tempStreak;
         
+        // --- 渲染顶部兑换区域 ---
+        document.getElementById('redeemList').innerHTML = milestones.map(m => {
+            const earnedDates = earnedMilestones[m.d];
+            
+            if (earnedDates.length === 0) {
+                // 尚未获得该奖励
+                return `
+                <div class="redeem-item locked">
+                    <input type="checkbox" disabled>
+                    <div style="width:100%;">
+                        <span style="font-size:12px"><b>${m.d}D:</b> ${m.t} ${m.icon}</span><br>
+                        <span style="font-size:9px">Not Earned Yet</span>
+                    </div>
+                </div>`;
+            } else {
+                // 已经获得该奖励（可能一次或多次）
+                // 默认选中第一个未兑换的日期，如果都兑换了，选中最后一个
+                const defaultDate = earnedDates.find(date => !redeemedRecords[`${m.d}-${date}`]) || earnedDates[earnedDates.length - 1];
+                const isCurrentlyChecked = redeemedRecords[`${m.d}-${defaultDate}`] ? 'checked' : '';
+                
+                return `
+                <div class="redeem-item ready">
+                    <input type="checkbox" id="chk-${m.d}" ${isCurrentlyChecked} onchange="toggleRedeemSync(${m.d})">
+                    <div style="width:100%; display:flex; flex-direction:column;">
+                        <span style="font-size:12px; font-weight:bold">${m.d}D: ${m.t} ${m.icon}</span>
+                        <select id="sel-${m.d}" class="redeem-select" onchange="updateCheckboxUI(${m.d})">
+                            ${earnedDates.map(date => {
+                                const isUsed = redeemedRecords[`${m.d}-${date}`];
+                                const selAttr = date === defaultDate ? 'selected' : '';
+                                return `<option value="${date}" ${selAttr}>Earned ${date} ${isUsed ? '(Used ✅)' : '(Available 🎁)'}</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
+                </div>`;
+            }
+        }).join('');
+
+        // 渲染进度条和钱包
         document.getElementById('milestoneBar').innerHTML = milestones.map(m => {
             const isDone = tempStreak >= m.d;
             return `<div class="milestone-item ${isDone ? 'achieved' : ''}">${m.icon} ${m.t} ${isDone ? m.d : tempStreak}/${m.d}</div>`;
         }).join('');
-
-        document.getElementById('redeemList').innerHTML = milestones.map(m => `
-            <div class="redeem-item" style="display:flex; align-items:center; gap:8px; background:#f8f9fa; padding:10px; border-radius:8px; border:1px solid #eee; opacity:${tempStreak >= m.d ? 1 : 0.4}">
-                <input type="checkbox" ${redeemed['s'+m.d] ? 'checked' : ''} ${tempStreak >= m.d ? '' : 'disabled'} onchange="syncCSV('REDEEM','${m.d}')">
-                <span style="font-size:11px"><b>${m.d}D:</b> ${m.t}</span>
-            </div>
-        `).join('');
 
         document.getElementById('walletGrid').innerHTML = team.map(n => `
             <div class="wallet-item">
@@ -176,29 +252,86 @@
 
         const from = document.getElementById('tfFrom'); const to = document.getElementById('tfTo');
         if(from.options.length <= 1) { team.forEach(n => { from.add(new Option(n, n)); to.add(new Option(n, n)); }); }
+        
         renderCalendar();
     }
 
+    // --- 兑换交互逻辑 ---
+    function updateCheckboxUI(milestoneType) {
+        // 当用户切换下拉菜单中的日期时，自动更新旁边的复选框状态
+        const selectedDate = document.getElementById(`sel-${milestoneType}`).value;
+        const isRedeemed = redeemedRecords[`${milestoneType}-${selectedDate}`];
+        document.getElementById(`chk-${milestoneType}`).checked = !!isRedeemed;
+    }
+
+    async function toggleRedeemSync(milestoneType) {
+        // 当用户点击复选框时，向 GitHub 写入或删除对应的 REDEEM 记录
+        const selectedDate = document.getElementById(`sel-${milestoneType}`).value;
+        try {
+            const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+            const get = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
+            const json = await get.json();
+            let lines = decodeURIComponent(escape(atob(json.content))).split('\n').filter(l => l.trim() !== "");
+            
+            const matchStr = `REDEEM,${milestoneType},${selectedDate}`;
+            const idx = lines.findIndex(l => l.startsWith(matchStr));
+            
+            if (idx !== -1) {
+                lines.splice(idx, 1); // 存在则删除（取消兑换）
+            } else {
+                lines.push(`${matchStr},${new Date().toISOString().split('T')[0]}`); // 不存在则添加（执行兑换）
+            }
+
+            await fetch(url, { method: "PUT", headers: { 'Authorization': `token ${GITHUB_TOKEN}` }, body: JSON.stringify({ message: `Redeem ${milestoneType} for ${selectedDate}`, content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha }) });
+            load();
+        } catch(e) { alert("Fail to sync redemption."); }
+    }
+
+    // --- 日历渲染逻辑 ---
     function renderCalendar() {
         document.getElementById('monthDisplay').innerText = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         const cal = document.getElementById('calendarGrid'); cal.innerHTML = '';
         ["Mon", "Tue", "Wed", "Thu", "Fri"].forEach(d => cal.innerHTML += `<div class="weekday-label">${d}</div>`);
+        
         const y = viewDate.getFullYear(), m = viewDate.getMonth(), days = new Date(y, m+1, 0).getDate();
+        
         for(let d=1; d<=days; d++) {
             const dObj = new Date(y, m, d);
-            if (dObj.getDay() % 6 === 0) continue;
+            if (dObj.getDay() % 6 === 0) continue; // Skip weekends
             if (d === 1 && dObj.getDay() !== 1) for(let i=0; i<dObj.getDay()-1; i++) cal.innerHTML += `<div class="cal-day empty" style="border:none"></div>`;
+            
             const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const row = csvData.find(r => r[0] === ds);
+            
             let cls = '', innerHTML = `<strong>${d}</strong>`;
+
             if(row) {
                 const late = row.slice(1).includes("Late");
                 cls = late ? 'day-fail' : 'day-success';
-                const sCount = streakMap[ds];
+                const sCount = streakMap[ds]; // 获取这天是连胜第几天
+                
                 if (sCount) {
-                    const milestone = [...milestones].reverse().find(mi => sCount >= mi.d) || milestones[0];
-                    innerHTML += `<div class="day-info">${sCount >= milestone.d ? milestone.icon : ''}<br><span class="day-badge">${milestone.t.substring(0,4)} ${sCount}/${milestone.d}</span></div>`;
-                } else if (late) innerHTML += `<div class="day-info" style="color:var(--danger)">LATE</div>`;
+                    const milestone = milestones.find(mi => mi.d === sCount);
+                    if (milestone) {
+                        // 达成了里程碑日！
+                        innerHTML += `
+                            <div class="day-info" style="color:var(--success)">
+                                <span style="font-size:16px">${milestone.icon}</span><br>
+                                ACHIEVED!
+                            </div>
+                            <span class="day-badge">${sCount}/${sCount}</span>`;
+                    } else {
+                        // 进行中的连胜
+                        const nextM = milestones.find(mi => sCount < mi.d) || milestones[milestones.length - 1];
+                        innerHTML += `
+                            <div class="day-info">
+                                <span style="color:#1a73e8">${nextM.t}</span><br>
+                                <span style="font-size:11px">${sCount}/${nextM.d}</span>
+                            </div>`;
+                    }
+                } else if (late) {
+                    innerHTML += `<div class="day-info" style="color:var(--danger)">LATE</div>`;
+                }
             }
             cal.innerHTML += `<div class="cal-day ${cls} ${activeDate === ds ? 'active' : ''}" onclick="openEdit('${ds}')">${innerHTML}</div>`;
         }
@@ -210,25 +343,15 @@
             const get = await fetch(url, { headers: { 'Authorization': `token ${GITHUB_TOKEN}` } });
             const json = await get.json();
             let lines = decodeURIComponent(escape(atob(json.content))).split('\n').filter(l => l.trim() !== "");
-            if (type === "REDEEM") {
-                const idx = lines.findIndex(l => l.startsWith(`REDEEM,s${data}`));
-                if (idx !== -1) lines.splice(idx, 1); else lines.push(`REDEEM,s${data},${new Date().toISOString().split('T')[0]}`);
-            } else if (type === "TRANSFER") lines.push(`TRANSFER,${data},${new Date().toISOString().split('T')[0]}`);
-            else {
+            
+            if (type === "TRANSFER") lines.push(`TRANSFER,${data},${new Date().toISOString().split('T')[0]}`);
+            else if (type === "LOG") {
                 const idx = lines.findIndex(l => l.startsWith(matchStr));
                 if (idx !== -1) lines[idx] = data; else lines.push(data);
             }
             await fetch(url, { method: "PUT", headers: { 'Authorization': `token ${GITHUB_TOKEN}` }, body: JSON.stringify({ message: "Update", content: btoa(unescape(encodeURIComponent(lines.join('\n')))), sha: json.sha }) });
             load();
         } catch(e) { alert("Fail"); }
-    }
-
-    function openEdit(ds) {
-        activeDate = ds; renderCalendar();
-        const row = csvData.find(r => r[0] === ds);
-        document.getElementById('editBlock').style.display = "block";
-        document.getElementById('editTitle').innerText = "Log: " + ds;
-        document.getElementById('editGrid').innerHTML = team.map((n, i) => `<div style="display:flex;flex-direction:column"><label style="font-size:10px;font-weight:bold">${n}</label><select id="edit-${n}">${statusOpts.map(o => `<option value="${o}" ${(row && row[i+1] === o) ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`).join('');
     }
 
     async function saveAttendance() {
@@ -238,15 +361,25 @@
         document.getElementById('editBlock').style.display = "none";
     }
 
+    function openEdit(ds) {
+        activeDate = ds; renderCalendar();
+        const row = csvData.find(r => r[0] === ds);
+        const eb = document.getElementById('editBlock'); eb.style.display = "block";
+        document.getElementById('editTitle').innerText = "Log: " + ds;
+        document.getElementById('editGrid').innerHTML = team.map((n, i) => `<div style="display:flex;flex-direction:column"><label style="font-size:10px;font-weight:bold">${n}</label><select id="edit-${n}">${statusOpts.map(o => `<option value="${o}" ${(row && row[i+1] === o) ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`).join('');
+        eb.scrollIntoView({ behavior: 'smooth' });
+    }
+
     async function executeTransfer() {
         const from = document.getElementById('tfFrom').value, to = document.getElementById('tfTo').value;
-        if(!from || !to || from === to) return alert("Invalid");
-        if(walletState[from].balance <= 0) return alert("No tickets");
+        if(!from || !to || from === to) return alert("Invalid transfer");
+        if(walletState[from].balance <= 0) return alert(`${from} has no tickets`);
         await syncCSV("TRANSFER", `${from},${to}`);
     }
 
     function toggleBlock(id) { const b = document.getElementById(id); b.style.display = b.style.display === "none" ? "block" : "none"; }
     function changeMonth(s) { viewDate.setMonth(viewDate.getMonth() + s); renderCalendar(); }
+    
     load();
 </script>
 </body>
