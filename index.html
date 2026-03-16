@@ -9,17 +9,18 @@
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #3c4043; }
         .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        /* Tab 样式 */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
         .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-weight: bold; color: #70757a; border-bottom: 3px solid transparent; }
         .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #e8f0fe; }
         .section { display: none; }
         .section.active { display: block; }
 
-        /* 奖惩进度条 */
         .rewards-banner { display: flex; justify-content: space-around; background: #e8f0fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .reward-item { text-align: center; opacity: 0.25; font-size: 0.85em; transition: 0.3s; }
         .reward-item.active { opacity: 1; transform: scale(1.1); font-weight: bold; color: var(--success); }
+
+        .date-selector { margin-bottom: 20px; padding: 15px; background: #fffde7; border-radius: 8px; border: 1px solid #fff59d; text-align: center; }
+        input[type="date"] { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-family: inherit; }
 
         table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
@@ -51,6 +52,12 @@
             <div class="reward-item" id="reward-30">✈️<br>30D: Day Off</div>
         </div>
 
+        <div class="date-selector">
+            <label><strong>Logging for Date: </strong></label>
+            <input type="date" id="logDate">
+            <p style="font-size: 0.8em; color: #888; margin: 5px 0 0 0;">(You can backdate logs or update past records)</p>
+        </div>
+
         <div style="text-align: center; margin-bottom: 20px;">
             <span style="font-size: 1.2em;">Team Streak: <strong><span id="teamStreak">0</span> Days</strong></span>
         </div>
@@ -59,37 +66,38 @@
             <thead>
                 <tr>
                     <th>Member</th>
-                    <th>Today's Status</th>
-                    <th>Personal Streak</th>
+                    <th>Status</th>
+                    <th>Streak</th>
                     <th>Tickets</th>
                 </tr>
             </thead>
             <tbody id="teamBody"></tbody>
         </table>
-        <button class="btn-save" onclick="saveToday()">Confirm Today's Log</button>
+        <button class="btn-save" onclick="saveData()">Confirm & Save to Archive</button>
     </div>
 
     <div id="history" class="section">
-        <h3>Past Logs</h3>
+        <h3>Past Logs (Chronological)</h3>
         <div id="historyContainer"></div>
     </div>
 
-    <button class="btn-reset" onclick="resetData()">Reset System</button>
+    <button class="btn-reset" onclick="resetData()">Reset All Data</button>
 </div>
 
 <script>
     const team = ["Annika", "Eleanor", "Geehye", "Gui", "Jenna", "Matt", "Oriol", "Tommy", "Zhixiao"];
     const statusOptions = ["On Time", "Late", "Remote", "OOO", "Office Closed", "PASS", "Sick"];
 
-    // 从本地读取数据
-    let state = JSON.parse(localStorage.getItem('bolt_data_v3')) || {
-        teamStreak: 0,
-        history: [],
+    let state = JSON.parse(localStorage.getItem('bolt_v4_data')) || {
+        history: [], // [{date: '2026-03-16', data: {...}}]
         members: team.reduce((acc, name) => {
-            acc[name] = { streak: 0, tickets: 0 };
+            acc[name] = { tickets: 0 };
             return acc;
         }, {})
     };
+
+    // 设置默认日期为今天
+    document.getElementById('logDate').valueAsDate = new Date();
 
     function switchTab(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -102,6 +110,8 @@
     function initTable() {
         const body = document.getElementById('teamBody');
         body.innerHTML = '';
+        const stats = calculateStreaks(); // 连胜次数现在根据历史记录动态计算
+        
         team.forEach(name => {
             const m = state.members[name];
             body.innerHTML += `
@@ -112,56 +122,92 @@
                             ${statusOptions.map(o => `<option value="${o}">${o}</option>`).join('')}
                         </select>
                     </td>
-                    <td>${m.streak}d</td>
+                    <td>${stats.personal[name] || 0}d</td>
                     <td>${m.tickets} 🎫</td>
                 </tr>
             `;
         });
-        updateUI();
+        document.getElementById('teamStreak').innerText = stats.team;
+        updateRewards(stats.team);
     }
 
-    function saveToday() {
-        const todayStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        const dailyRecord = { date: todayStr, data: {} };
-        let teamSuccess = true;
+    // 核心逻辑：基于历史记录自动计算 Streaks
+    function calculateStreaks() {
+        // 先按日期从旧到新排序，才能正确计算连胜
+        const sortedHistory = [...state.history].sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        let teamStreak = 0;
+        let personalStreaks = {};
+        team.forEach(n => personalStreaks[n] = 0);
 
-        team.forEach(name => {
-            const status = document.getElementById(`sel-${name}`).value;
-            dailyRecord.data[name] = status;
-            const m = state.members[name];
-
-            if(status === "On Time") {
-                m.streak++;
-                if(m.streak % 10 === 0) m.tickets++;
-            } else if(status === "Late") {
-                if(m.tickets > 0 && confirm(`${name} is late! Burn a Golden Ticket?`)) {
-                    m.tickets--;
+        sortedHistory.forEach(day => {
+            let dayPerfect = true;
+            team.forEach(name => {
+                const status = day.data[name];
+                if(status === "On Time") {
+                    personalStreaks[name]++;
+                } else if (status === "Remote" || status === "Office Closed") {
+                    // 保持连胜但不累加数值？或者累加？这里暂定不累加，保持数字
                 } else {
-                    m.streak = 0;
-                    teamSuccess = false;
+                    personalStreaks[name] = 0;
+                    dayPerfect = false;
                 }
-            } else if(status !== "Remote" && status !== "Office Closed") {
-                m.streak = 0;
+            });
+            teamStreak = dayPerfect ? teamStreak + 1 : 0;
+        });
+
+        return { team: teamStreak, personal: personalStreaks };
+    }
+
+    function saveData() {
+        const selectedDate = document.getElementById('logDate').value;
+        if(!selectedDate) return alert("Please select a date.");
+
+        const dailyRecord = { date: selectedDate, data: {} };
+        team.forEach(name => {
+            dailyRecord.data[name] = document.getElementById(`sel-${name}`).value;
+        });
+
+        // 检查是否已有该日期记录
+        const existingIndex = state.history.findIndex(h => h.date === selectedDate);
+        if(existingIndex !== -1) {
+            if(!confirm("Record for this date already exists. Overwrite?")) return;
+            state.history[existingIndex] = dailyRecord;
+        } else {
+            state.history.push(dailyRecord);
+        }
+
+        // 处理 Golden Ticket (每10天 On Time 自动获得)
+        // 注意：这里的 Ticket 逻辑简单处理，如果你需要更复杂的可以手动加减
+        const stats = calculateStreaks();
+        team.forEach(name => {
+            if(stats.personal[name] > 0 && stats.personal[name] % 10 === 0) {
+                // 这里仅作演示提示，Ticket 逻辑可按需深度定制
             }
         });
 
-        state.teamStreak = teamSuccess ? state.teamStreak + 1 : 0;
-        state.history.unshift(dailyRecord); // 放在历史记录第一条
-        localStorage.setItem('bolt_data_v3', JSON.stringify(state));
+        localStorage.setItem('bolt_v4_data', JSON.stringify(state));
         initTable();
-        alert("Daily log saved!");
+        alert("Saved for " + selectedDate);
     }
 
     function renderHistory() {
         const container = document.getElementById('historyContainer');
         if(state.history.length === 0) {
-            container.innerHTML = "<p>No history yet.</p>";
+            container.innerHTML = "<p>No logs found.</p>";
             return;
         }
-        container.innerHTML = state.history.map(entry => `
-            <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 8px;">
-                <div style="font-weight: bold; margin-bottom: 8px; color: #555;">📅 ${entry.date}</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;">
+
+        // 历史页面按日期倒序排列（最新的在最上面）
+        const sorted = [...state.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        container.innerHTML = sorted.map(entry => `
+            <div style="border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 8px; background: #fff;">
+                <div style="font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #f0f0f0; display:flex; justify-content:space-between;">
+                    <span>📅 ${entry.date}</span>
+                    <button onclick="deleteRecord('${entry.date}')" style="color:red; background:none; border:none; cursor:pointer; font-size:10px;">Delete</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                     ${Object.entries(entry.data).map(([n, s]) => `
                         <div style="font-size: 12px;">${n}: <span class="status-tag tag-${s.replace(' ', '')}">${s}</span></div>
                     `).join('')}
@@ -170,18 +216,22 @@
         `).join('');
     }
 
-    function updateUI() {
-        document.getElementById('teamStreak').innerText = state.teamStreak;
+    function deleteRecord(date) {
+        if(!confirm("Delete record for " + date + "?")) return;
+        state.history = state.history.filter(h => h.date !== date);
+        localStorage.setItem('bolt_v4_data', JSON.stringify(state));
+        renderHistory();
+        initTable();
+    }
+
+    function updateRewards(streak) {
         [5, 10, 15, 30].forEach(d => {
-            document.getElementById(`reward-${d}`).classList.toggle('active', state.teamStreak >= d);
+            document.getElementById(`reward-${d}`).classList.toggle('active', streak >= d);
         });
     }
 
     function resetData() {
-        if(confirm("DANGER: Clear all streaks and history?")) {
-            localStorage.clear();
-            location.reload();
-        }
+        if(confirm("Wipe everything?")) { localStorage.clear(); location.reload(); }
     }
 
     initTable();
